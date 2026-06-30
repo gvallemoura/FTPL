@@ -1,0 +1,546 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{natbib}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\geometry{margin=1in}
+\onehalfspacing
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{remark}{Remark}
+\newtheorem{definition}{Definition}
+
+\title{\textbf{Debt Denomination and Fiscal Valuation:\\
+Nominal, Floating-Rate, and Inflation-Indexed Government Liabilities}}
+
+\author{}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This note develops a fiscal valuation model with three classes of government liabilities:
+nominal fixed-rate debt, floating-rate debt, and inflation-indexed debt. Standard
+formulations of the Fiscal Theory of the Price Level emphasize nominal government
+liabilities, whose real value can be reduced by inflation. Many governments, however,
+issue large quantities of inflation-indexed and floating-rate debt. These instruments
+alter the margins through which fiscal valuation can be restored.
+
+We derive a generalized government valuation equation with multiperiod nominal,
+floating-rate, and indexed bonds. We then define the valuation elasticity of each debt
+instrument with respect to the price level. Nominal fixed-rate debt has the highest
+valuation elasticity because surprise inflation directly erodes its real value.
+Inflation-indexed debt has zero direct valuation elasticity because its payoff is defined
+in real terms. Floating-rate debt occupies an intermediate position: although its real
+principal is eroded by inflation, monetary policy feedback raises future debt-service
+costs. The model therefore delivers a three-way ranking of fiscal inflation incentives:
+nominal fixed-rate debt generates the strongest price-level valuation channel,
+floating-rate debt an intermediate one, and indexed debt the weakest one.
+
+The note provides a theoretical foundation for empirical work using debt denomination
+to distinguish fiscal valuation mechanisms from resource-constraint explanations of
+inflation.
+\end{abstract}
+
+\newpage
+
+\section{Introduction}
+
+The Fiscal Theory of the Price Level (FTPL) views the price level as part of the
+valuation mechanism for government liabilities. In its simplest form, the real value of
+nominal government debt must equal the expected present value of future primary
+surpluses. If fiscal backing is insufficient, the price level can adjust so that the real
+value of nominal liabilities falls.
+
+This standard intuition is sharpest when all public debt is nominal and fixed in currency
+units. Modern government debt portfolios, however, are more complex. In several
+countries, and especially in Brazil, the Treasury issues not only nominal fixed-rate bonds,
+but also inflation-indexed bonds and floating-rate securities. These instruments differ in
+the extent to which inflation can reduce their real fiscal burden.
+
+This note develops a compact theoretical framework that incorporates these three debt
+classes into the FTPL valuation equation. The purpose is not to provide a full quantitative
+model of debt management, but to isolate a simple implication: debt denomination
+determines the strength of the price-level valuation channel.
+
+The key result is a ranking of valuation elasticities. Nominal fixed-rate debt has the
+highest valuation elasticity with respect to the price level. Inflation-indexed debt has no
+direct valuation elasticity. Floating-rate debt lies between the two because inflation erodes
+the real value of outstanding nominal principal, but higher short-term interest rates feed
+back into future debt-service costs.
+
+The contribution is therefore theoretical and clarifying. It shows how the FTPL
+valuation logic extends beyond nominal debt and provides a foundation for empirical
+tests based on the denomination composition of government liabilities.
+
+\section{Household Environment and Asset Pricing}
+
+Consider a discrete-time endowment economy populated by an infinitely lived
+representative household. Preferences are given by
+\begin{equation}
+\mathbb{E}_0
+\sum_{t=0}^{\infty}
+\beta^t
+U\left(C_t,\frac{M_t}{P_t}\right),
+\qquad
+\beta \in (0,1),
+\end{equation}
+where $C_t$ is consumption, $M_t/P_t$ denotes real money balances, and $P_t$ is the
+aggregate price level.
+
+Let
+\begin{equation}
+m_{t,t+1}
+\equiv
+\beta
+\frac{
+U_C(C_{t+1},M_{t+1}/P_{t+1})
+}{
+U_C(C_t,M_t/P_t)
+}
+\end{equation}
+denote the one-period real stochastic discount factor. For $\tau \geq 1$, define the
+multiperiod real stochastic discount factor
+\begin{equation}
+m_{t,t+\tau}
+\equiv
+\prod_{s=0}^{\tau-1} m_{t+s,t+s+1}.
+\end{equation}
+
+The government issues three types of liabilities.
+
+\begin{enumerate}
+\item \textbf{Nominal fixed-rate bonds.} A nominal bond issued at time $t$ promises
+a fixed amount of currency in the future. Its real payoff is therefore exposed to
+future inflation.
+
+
+\item \textbf{Inflation-indexed bonds.} An indexed bond promises payments defined
+in units of the consumption good. Its real payoff is protected from inflation by
+construction.
+
+\item \textbf{Floating-rate bonds.} A floating-rate bond promises nominal payments
+indexed to the short-term policy rate. Its payoff is nominal, but future coupons
+adjust with monetary policy.
+
+
+\end{enumerate}
+
+For a one-period nominal fixed-rate bond with gross nominal return $1+i_t^N$, the Euler
+equation is
+\begin{equation}
+1=\mathbb{E}_t
+\left[
+m_{t,t+1}
+(1+i_t^N)
+\frac{P_t}{P_{t+1}}
+\right].
+\label{eq:euler_nominal}
+\end{equation}
+
+For a one-period inflation-indexed bond with gross real return $1+i_t^R$, the Euler
+equation is
+\begin{equation}
+1=\mathbb{E}_t
+\left[
+m_{t,t+1}
+(1+i_t^R)
+\right].
+\label{eq:euler_real}
+\end{equation}
+
+For a one-period floating-rate bond whose payoff is indexed to the within-period policy
+rate $i_t$, the Euler equation is
+\begin{equation}
+1=\mathbb{E}_t
+\left[
+m_{t,t+1}
+(1+i_t)
+\frac{P_t}{P_{t+1}}
+\right].
+\label{eq:euler_float}
+\end{equation}
+
+The difference between \eqref{eq:euler_nominal} and \eqref{eq:euler_real} is the
+standard Fisher distinction between nominal and real payoffs. The floating-rate
+condition \eqref{eq:euler_float} is closer to the nominal bond equation because the
+payoff is denominated in currency. However, unlike fixed-rate nominal bonds, the
+floating-rate payoff adjusts with the policy rate. This feature is central for fiscal
+valuation.
+
+\section{Government Valuation with Three Debt Classes}
+
+Let the government issue portfolios of nominal fixed-rate, floating-rate, and
+inflation-indexed bonds at multiple maturities. Let $B_t^{N,(\tau)}$ denote the nominal
+face value of fixed-rate debt maturing in $\tau$ periods, $B_t^{F,(\tau)}$ the nominal
+value of floating-rate debt, and $B_t^{R,(\tau)}$ the real face value of indexed debt.
+
+Let $Q_t^{N,(\tau)}$, $Q_t^{F,(\tau)}$, and $Q_t^{R,(\tau)}$ denote the corresponding
+time-$t$ prices. The real market value of outstanding government liabilities is
+
+\begin{equation}
+\mathcal{V}_t
+=
+\underbrace{
+\frac{1}{P_t}
+\sum_{\tau\geq 1}
+Q_t^{N,(\tau)}
+B_t^{N,(\tau)}
+}_{\mathcal{V}_t^N}
++
+\underbrace{
+\frac{1}{P_t}
+\sum_{\tau\geq 1}
+Q_t^{F,(\tau)}
+B_t^{F,(\tau)}
+}_{\mathcal{V}_t^F}
++
+\underbrace{
+\sum_{\tau\geq 1}
+Q_t^{R,(\tau)}
+B_t^{R,(\tau)}
+}_{\mathcal{V}_t^R}.
+\label{eq:market_value}
+\end{equation}
+
+
+Nominal fixed-rate and floating-rate debt enter in real terms after division by $P_t$.
+Inflation-indexed debt enters directly in real terms because its payoff is already
+defined in consumption units.
+
+Let $S_t$ denote the real primary surplus. Ignoring seigniorage for notational
+simplicity, the intertemporal government valuation equation is
+
+\begin{equation}
+\boxed{
+\mathcal{V}_t^N+\mathcal{V}_t^F+\mathcal{V}_t^R
+=
+\mathbb{E}_t
+\sum_{\tau=0}^{\infty}
+m_{t,t+\tau}
+S_{t+\tau}
+\equiv
+PV_t(S)
+}
+\label{eq:valuation_general}
+\end{equation}
+
+
+Equation \eqref{eq:valuation_general} is the natural extension of the standard FTPL
+valuation equation to a debt portfolio with nominal fixed-rate, floating-rate, and
+inflation-indexed liabilities.
+
+
+\begin{proposition}[Fiscal valuation with heterogeneous debt]
+Suppose the government's transversality condition holds:
+\begin{equation}
+\lim_{T\to\infty}
+\mathbb{E}_t
+\left[
+m_{t,T}\mathcal{V}_T
+\right]
+=
+0.
+\end{equation}
+Then the real market value of government liabilities satisfies the valuation equation
+\eqref{eq:valuation_general}.
+\end{proposition}
+
+
+\begin{proof}
+Starting from the real government flow budget constraint, the real value of liabilities
+carried into the next period equals current primary deficits plus the real value of
+maturing obligations rolled into new liabilities. Iterating the budget constraint forward
+and imposing the transversality condition eliminates the terminal value of debt. The
+remaining object is the expected discounted value of future primary surpluses. Because
+the current liability portfolio is marked to market, the left-hand side is the sum of the
+real market values of nominal fixed-rate, floating-rate, and inflation-indexed liabilities.
+\end{proof}
+
+\section{Valuation Elasticities}
+
+The three debt classes differ in the extent to which a change in the price level reduces
+their real fiscal burden.
+
+
+\begin{definition}[Valuation elasticity]
+For debt class $j \in \{N,F,R\}$, define its price-level valuation elasticity as
+\begin{equation}
+\kappa_t^j
+\equiv
+-
+\frac{\partial \log \mathcal{V}_t^j}{\partial \log P_t},
+\label{eq:kappa_def}
+\end{equation}
+where the derivative is evaluated holding fixed the contractual quantity of debt and
+allowing for the relevant pricing response of that instrument.
+\end{definition}
+
+
+For nominal fixed-rate debt, the payoff is predetermined in currency units. Holding
+nominal bond prices fixed on impact, a rise in the price level reduces the real value of
+the claim one-for-one:
+\begin{equation}
+\kappa_t^N = 1.
+\label{eq:kappa_nominal}
+\end{equation}
+
+For inflation-indexed debt, the payoff is defined in units of the consumption good. Its
+real value is not directly reduced by a change in the price level:
+\begin{equation}
+\kappa_t^R = 0.
+\label{eq:kappa_real}
+\end{equation}
+
+Floating-rate debt is intermediate. Its principal is nominal, so inflation has a direct
+debt-eroding effect. However, because coupons reset with the short-term policy rate,
+inflation also raises future debt-service costs when monetary policy reacts to inflation.
+Let the effective valuation elasticity of floating-rate debt be written as
+
+\begin{equation}
+\kappa_t^F
+=
+1-\chi_t,
+\label{eq:kappa_float}
+\end{equation}
+
+where $\chi_t$ denotes the fraction of direct inflation relief offset by higher expected
+future floating-rate payments. Under an active monetary regime in which the policy rate
+responds positively to inflation, $\chi_t>0$. If the feedback does not more than offset
+the direct inflation relief, $\chi_t<1$.
+
+Thus,
+\begin{equation}
+0 < \kappa_t^F < 1.
+\label{eq:kappa_float_bounds}
+\end{equation}
+
+
+\begin{proposition}[Ranking of valuation elasticities]
+\label{prop:kappa_ranking}
+Under an active monetary regime in which floating-rate coupons respond positively but
+not explosively to inflation, the valuation elasticities satisfy
+\begin{equation}
+\kappa_t^N > \kappa_t^F > \kappa_t^R,
+\qquad
+\text{with}
+\qquad
+\kappa_t^N=1,
+\quad
+0<\kappa_t^F<1,
+\quad
+\kappa_t^R=0.
+\label{eq:kappa_ranking}
+\end{equation}
+\end{proposition}
+
+
+
+\begin{proof}
+The nominal fixed-rate claim is fixed in currency units, so its real value falls
+one-for-one with the price level, implying $\kappa_t^N=1$. The indexed claim is fixed in
+real units, so its real value is invariant to the price level, implying $\kappa_t^R=0$.
+The floating-rate claim is nominal, so it has the same direct price-level exposure as
+nominal fixed-rate debt. However, its coupon payments adjust with the policy rate.
+Under an active monetary regime, higher inflation raises expected future policy rates
+and therefore increases future floating-rate debt service. This offsets part of the direct
+inflation relief. If the offset is partial, then $0<\kappa_t^F<1$.
+\end{proof}
+
+\begin{remark}
+The intermediate position of floating-rate debt is not a purely contractual property.
+Unlike nominal fixed-rate debt and indexed debt, whose valuation elasticities are pinned
+down directly by their payoff definitions, the floating-rate elasticity depends on the
+monetary-policy regime. This is why floating-rate debt provides a sharper but more
+regime-dependent implication of fiscal valuation.
+\end{remark}
+
+\section{Fiscal Inflation Incentives}
+
+Consider an unbacked fiscal valuation shock associated with the issuance of debt type
+$j$. Let the shock be normalized by market value. Suppose the component of the shock
+that is not absorbed by revisions in expected future surpluses is transmitted through the
+price-level valuation channel with strength proportional to $\kappa_t^j$.
+
+A convenient reduced-form representation of the inflation response is
+
+\begin{equation}
+IRF_{\pi}^j(h)
+=
+\kappa_t^j
+(1-\rho_t^j)
+\Theta_h,
+\label{eq:irf_kappa}
+\end{equation}
+
+where $\rho_t^j\in[0,1]$ denotes the residual fiscal-backing share of the shock and
+$\Theta_h>0$ is a common propagation term.
+
+Equation \eqref{eq:irf_kappa} separates two objects. The valuation elasticity
+$\kappa_t^j$ is determined by debt denomination and the monetary regime. The residual
+backing term $\rho_t^j$ captures how much of the shock is absorbed through changes in
+expected future primary surpluses.
+
+\begin{proposition}[Debt-denomination ranking]
+Suppose residual fiscal backing is common across debt types:
+\begin{equation}
+\rho_t^N=\rho_t^F=\rho_t^R\equiv \rho_t<1.
+\label{eq:common_rho}
+\end{equation}
+Then the inflation responses inherit the valuation-elasticity ranking:
+\begin{equation}
+|IRF_{\pi}^N(h)|
+>
+|IRF_{\pi}^F(h)|
+>
+|IRF_{\pi}^R(h)|.
+\label{eq:irf_ranking}
+\end{equation}
+\end{proposition}
+
+
+\begin{proof}
+Under \eqref{eq:common_rho},
+\begin{equation}
+IRF_{\pi}^j(h)
+=
+\kappa_t^j(1-\rho_t)\Theta_h.
+\end{equation}
+Since $(1-\rho_t)\Theta_h>0$, the ranking of inflation responses is identical to the
+ranking of $\kappa_t^j$. The result follows from Proposition~\ref{prop:kappa_ranking}.
+\end{proof}
+
+
+
+\begin{remark}
+The ranking does not identify the level of fiscal backing. It identifies the relative
+ordering of the valuation elasticities $\kappa_t^N$, $\kappa_t^F$, and $\kappa_t^R$:
+the differential capacity of debt instruments to transmit fiscal valuation shocks through
+the price level.
+\end{remark}
+
+\section{Robustness to Residual-Backing Heterogeneity}
+
+Common residual backing is sufficient but not necessary for the ranking in
+\eqref{eq:irf_ranking}. To characterize the weaker condition, define
+\begin{equation}
+\phi_t^j
+\equiv
+\kappa_t^j(1-\rho_t^j).
+\end{equation}
+
+The ranking survives whenever
+\begin{equation}
+\phi_t^N>\phi_t^F>\phi_t^R.
+\label{eq:phi_ranking}
+\end{equation}
+
+Equivalently,
+
+\begin{align}
+\kappa_t^N\rho_t^N-\kappa_t^F\rho_t^F
+&<
+\kappa_t^N-\kappa_t^F,
+\label{eq:region_nf}
+\\
+\kappa_t^F\rho_t^F-\kappa_t^R\rho_t^R
+&<
+\kappa_t^F-\kappa_t^R.
+\label{eq:region_fr}
+\end{align}
+
+
+Equations \eqref{eq:region_nf} and \eqref{eq:region_fr} define an open convex region
+of residual-backing heterogeneity under which the denomination ranking remains valid.
+
+\begin{corollary}[Common residual backing is sufficient but not necessary]
+The common-backing case $\rho_t^N=\rho_t^F=\rho_t^R=\rho_t<1$ lies inside the region
+defined by \eqref{eq:region_nf}--\eqref{eq:region_fr}. Therefore, common residual
+backing is sufficient but not necessary for the inflation-ranking restriction.
+\end{corollary}
+
+\begin{proof}
+Substitute $\rho_t^N=\rho_t^F=\rho_t^R=\rho_t$ into
+\eqref{eq:region_nf}. The condition becomes
+\begin{equation}
+\rho_t(\kappa_t^N-\kappa_t^F)
+<
+\kappa_t^N-\kappa_t^F,
+\end{equation}
+which holds whenever $\rho_t<1$. The same argument applied to
+\eqref{eq:region_fr} gives
+\begin{equation}
+\rho_t(\kappa_t^F-\kappa_t^R)
+<
+\kappa_t^F-\kappa_t^R,
+\end{equation}
+which also holds whenever $\rho_t<1$.
+\end{proof}
+
+This robustness region clarifies the role of the assumptions. Violations of common
+residual backing need not invalidate the ranking. They matter only if residual backing
+differs across instruments strongly enough to overturn the ordering of
+$\kappa_t^j(1-\rho_t^j)$.
+
+A particularly robust comparison is between nominal fixed-rate and inflation-indexed
+debt. Since $\kappa_t^N=1$ and $\kappa_t^R=0$, the nominal--indexed ranking is pinned
+down by contract and does not depend on the monetary regime. The full three-way
+nominal--floating--indexed ranking is sharper, but it is also more dependent on the
+policy-rate feedback governing $\kappa_t^F$.
+
+\section{Valuation Variables}
+
+Indexed debt cannot be directly devalued through inflation. Therefore, an unbacked
+increase in indexed liabilities must be absorbed through other valuation margins:
+expected future primary surpluses, real discount rates, liquidity premia, or sovereign
+risk premia.
+
+This observation does not imply a strict theorem for any single asset-price variable.
+For example, sovereign CDS spreads include default risk, currency risk, global risk
+appetite, and liquidity components. Nevertheless, the model suggests a directional
+prediction: shocks to indexed debt should place relatively greater pressure on valuation
+variables than shocks to nominal fixed-rate debt.
+
+Thus, if $r_t$ denotes a real yield and $s_t$ a sovereign spread, the model suggests
+\begin{equation}
+|IRF_r^R(h)|
+\gtrsim
+|IRF_r^F(h)|
+\gtrsim
+|IRF_r^N(h)|,
+\end{equation}
+and similarly for sovereign spreads, subject to the caveat that empirical spreads need
+not map one-for-one into the theoretical valuation margin.
+
+\section{Conclusion}
+
+This note extends the fiscal valuation logic of the FTPL to a government debt portfolio
+containing nominal fixed-rate, floating-rate, and inflation-indexed liabilities. The key
+object is the valuation elasticity of each instrument with respect to the price level.
+
+Nominal fixed-rate debt has the highest valuation elasticity because inflation directly
+reduces its real value. Inflation-indexed debt has zero direct valuation elasticity because
+its payoff is defined in real terms. Floating-rate debt lies between the two because the
+direct erosion of real nominal principal is offset by higher future debt-service costs when
+monetary policy responds to inflation.
+
+The resulting ranking,
+\begin{equation}
+\kappa_t^N>\kappa_t^F>\kappa_t^R,
+\end{equation}
+provides a theoretical foundation for empirical tests using debt denomination. More
+generally, it shows that the composition of government liabilities matters for the
+mechanism through which fiscal imbalances are transmitted to prices and asset values.
+
+\bibliographystyle{aea}
+\bibliography{refs}
+
+\end{document}
