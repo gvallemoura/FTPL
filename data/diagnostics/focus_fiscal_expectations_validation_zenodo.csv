@@ -1,0 +1,5 @@
+variable,zenodo_file,n_common_months,max_abs_diff,correlation,note
+focus_dlsp_12m,data/raw/zenodo_24206681_fiscal_svar/fiscal_svar/data/raw/focus_dlsp.csv,322,0.11507936507936734,0.9999998077470759,same method; differences reflect data vintage only
+focus_dlsp_36m,data/raw/zenodo_24206681_fiscal_svar/fiscal_svar/data/raw/focus_dlsp3.csv,301,0.294026388888895,0.9999992908089429,same method; differences reflect data vintage only
+focus_primary_12m,data/raw/zenodo_24206681_fiscal_svar/fiscal_svar/data/raw/focus_primary.csv,322,9.259259259258856e-05,0.9999999999978492,same method; differences reflect data vintage only
+focus_primary_36m,data/raw/zenodo_24206681_fiscal_svar/fiscal_svar/data/raw/focus_primary3.csv,301,0.0036157407407407943,0.9999999940207682,same method; differences reflect data vintage only

@@ -1,0 +1,42 @@
+{
+  "predetermined_controls_main": [
+    "focus_dlsp_12m_eom_lag1",
+    "focus_dlsp_36m_eom_lag1",
+    "focus_primary_12m_eom_lag1",
+    "focus_primary_36m_eom_lag1"
+  ],
+  "predetermined_controls_alt_avg": [
+    "focus_dlsp_12m_avg_lag1",
+    "focus_dlsp_36m_avg_lag1",
+    "focus_primary_12m_avg_lag1",
+    "focus_primary_36m_avg_lag1"
+  ],
+  "predetermined_revisions": [
+    "focus_dlsp_12m_rev_lag1",
+    "focus_dlsp_36m_rev_lag1",
+    "focus_primary_12m_rev_lag1",
+    "focus_primary_36m_rev_lag1"
+  ],
+  "purge_contemporaneous_do_not_use_as_controls": [
+    "focus_dlsp_12m_rev_curr",
+    "focus_dlsp_36m_rev_curr",
+    "focus_primary_12m_rev_curr",
+    "focus_primary_36m_rev_curr"
+  ],
+  "event_dummies_with_rev_curr": [
+    "d_focus_gdprev_2007m04",
+    "d_focus_covid_2020m03",
+    "d_focus_covid_2020m04",
+    "d_focus_covid_2020m05",
+    "d_focus_covid_2020m06",
+    "d_focus_covid_2020m07"
+  ],
+  "event_dummies_with_rev_lag1": [
+    "d_focus_gdprev_2007m04_lag1",
+    "d_focus_covid_2020m03_lag1",
+    "d_focus_covid_2020m04_lag1",
+    "d_focus_covid_2020m05_lag1",
+    "d_focus_covid_2020m06_lag1",
+    "d_focus_covid_2020m07_lag1"
+  ]
+}
