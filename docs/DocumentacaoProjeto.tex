@@ -1,0 +1,1091 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{amssymb}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+\onehalfspacing
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+\title{\textbf{Documentação do Projeto FTPL}\\
+\large Denominação da Dívida Pública Brasileira, Backing Fiscal e Inflação}
+\author{Documento de acompanhamento do pipeline empírico}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Este documento descreve o estado atual do projeto empírico sobre denominação da
+dívida pública brasileira, Fiscal Theory of the Price Level (FTPL) e inflação. O
+objetivo é registrar, em um único arquivo, o que já foi implementado, quais bases
+foram construídas, quais códigos existem, quais diagnósticos foram executados e
+quais etapas permanecem pendentes. A documentação cobre a base teórica, o texto
+principal do projeto, a estratégia de construção de choques de emissão, o notebook
+de construção de dados e a implementação da Etapa A de controles estruturais
+predeterminados. Também registra a implementação inicial da Etapa B, dedicada às
+curvas de juros da ANBIMA, incluindo seu fallback manual quando a API exige
+credenciais não disponíveis no ambiente local.
+\end{abstract}
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+\section{Objetivo do projeto}
+
+O projeto investiga se a denominação da dívida pública brasileira afeta a
+transmissão de choques fiscais para inflação e variáveis de valuation. A motivação
+teórica vem da FTPL: o valor real das obrigações do governo deve ser compatível
+com o valor presente esperado dos superávits primários futuros. Quando o backing
+fiscal esperado é insuficiente, o nível de preços pode ajustar para reduzir o valor
+real das obrigações nominais.
+
+O projeto explora uma restrição observável: diferentes instrumentos da dívida têm
+elasticidades distintas em relação ao nível de preços. Os grupos usados são:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \(N\): dívida nominal prefixada, principalmente LTN e NTN-F;
+    \item \(F\): dívida flutuante indexada à Selic, principalmente LFT;
+    \item \(R\): dívida indexada à inflação, principalmente NTN-B.
+\end{itemize}
+
+A previsão central é que, para choques comparáveis de emissão não explicados por
+notícias observáveis de backing fiscal, a resposta inflacionária deve seguir a
+ordenação
+\[
+    |IRF_\pi^N(h)| > |IRF_\pi^F(h)| > |IRF_\pi^R(h)|.
+\]
+A comparação mais robusta é entre dívida nominal prefixada e dívida indexada à
+inflação, pois suas elasticidades de valuation são determinadas diretamente pelo
+contrato. A comparação completa \(N\)-\(F\)-\(R\) é mais informativa, mas depende
+mais fortemente do regime de política monetária.
+
+\section{Modelo teórico, restrição testável e estratégia empírica}
+
+Esta seção apresenta de forma autocontida o mecanismo econômico, sua restrição
+testável e a estratégia empírica correspondente. A sequência é: a denominação da
+dívida determina elasticidades distintas de reavaliação pelo nível de preços; essas
+elasticidades implicam uma ordenação das respostas inflacionárias; e essa ordenação
+é testada usando inovações de emissão construídas com informação predeterminada,
+purga de notícias fiscais observáveis e projeções locais.
+
+\subsection{Valuation fiscal e denominação da dívida}
+
+Considere três classes de passivos. Se \(\mathcal{V}_t^j\) é o valor real de mercado da
+classe \(j\) e \(S_{t+\tau}\) é o superávit primário real, a restrição fiscal é
+\begin{equation}
+\mathcal{V}_t^N+\mathcal{V}_t^F+\mathcal{V}_t^R
+=\mathbb{E}_t\sum_{\tau=0}^{\infty}m_{t,t+\tau}S_{t+\tau}
+\equiv PV_t(S).
+\label{eq:doc_valuation}
+\end{equation}
+
+As classes são \(N\) (LTN e NTN-F), \(F\) (LFT) e \(R\) (NTN-B). A elasticidade
+de valuation em relação ao nível de preços é definida por
+\begin{equation}
+\kappa_t^j\equiv-\frac{\partial\log\mathcal{V}_t^j}{\partial\log P_t}.
+\label{eq:doc_kappa}
+\end{equation}
+
+O resultado central é
+\begin{equation}
+\kappa_t^N=1,\qquad 0<\kappa_t^F<1,\qquad \kappa_t^R=0,
+\qquad \kappa_t^N>\kappa_t^F>\kappa_t^R.
+\label{eq:doc_kappa_ranking}
+\end{equation}
+O caso \(F\) depende da reação da Selic à inflação; os casos \(N\) e \(R\) são
+fixados diretamente pelo contrato.
+
+Considere agora um choque de emissão da classe \(j\). Se \(\rho_t^j\) é a parcela
+do choque ainda respaldada por revisões residuais dos superávits esperados, o canal
+de valuation implica
+\begin{equation}
+IRF_\pi^j(h)=\kappa_t^j(1-\rho_t^j)\Theta_\pi(h),
+\qquad \Theta_\pi(h)>0.
+\label{eq:doc_irf_theory}
+\end{equation}
+Com \(\rho_t^N=\rho_t^F=\rho_t^R<1\), segue a restrição
+\begin{equation}
+|IRF_\pi^N(h)|>|IRF_\pi^F(h)|>|IRF_\pi^R(h)|.
+\label{eq:doc_irf_ranking}
+\end{equation}
+Com backing heterogêneo, a condição relevante é
+\(\phi_t^N>\phi_t^F>\phi_t^R\), onde
+\(\phi_t^j\equiv\kappa_t^j(1-\rho_t^j)\). Por isso, a comparação \(N\)-\(R\) é o
+teste primário e a ordenação tripla é o teste mais forte e mais dependente do regime.
+
+\subsection{Construção da inovação de emissão}
+
+A restrição teórica não deve ser testada com a emissão bruta diretamente. Primeiro,
+é necessário separar a decisão de colocação do Tesouro de refinanciamentos
+previsíveis, condições de mercado e notícias fiscais. A medida baseline é a emissão
+bruta no mercado primário. A variação do estoque não é o choque principal, pois
+incorpora mecanicamente accrual da Selic nas LFT e correção pelo IPCA e cupons reais
+nas NTN-B, o que poderia contaminar resultados de inflação e juros.
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item construir emissão bruta e inovações por tipo de dívida;
+    \item purgar essas inovações usando revisões de expectativas fiscais, como
+    Prisma Fiscal;
+    \item estimar projeções locais para inflação, expectativas de inflação, Selic,
+    yields reais, spreads soberanos e câmbio;
+    \item testar a restrição principal \(N > R\) e a restrição mais forte
+    \(N > F > R\).
+\end{itemize}
+
+Interações com a participação defasada de NTN-B, validação narrativa e uma
+estratégia IV baseada em demanda regulatória por NTN-B são extensões de robustez.
+
+\subsection{Predeterminação, vencimentos e purge fiscal}
+
+Os vencimentos programados devem usar apenas informação disponível em \(t-1\), de
+forma compatível com
+\[
+g_t^j
+=
+\alpha^j
++ \delta_0^j m_{t|t-1}^j
++ \delta_1^j m_{t+1|t-1}^j
++ \Lambda^{j'} Z_{t-1}
++ \mu_{m(t)}^j
++ u_t^j.
+\]
+
+Nesta equação, \(g_t^j\) é a emissão bruta normalizada por PIB defasado ou estoque
+defasado; \(m_{t|t-1}^j\) e \(m_{t+1|t-1}^j\) são pagamentos programados correntes e
+futuros; \(Z_{t-1}\) é o conjunto de informação predeterminada; e \(u_t^j\) é a
+inovação antes do purge fiscal. O vetor inclui, conforme disponibilidade, lags de
+emissão, estoque e participação, macroeconomia, operações anunciadas, risco,
+volatilidade, metas do PAF e fatores de curva de juros.
+
+O purge separa a notícia fiscal observável da inovação de emissão:
+\begin{equation}
+u_t^j=\gamma^j\Delta\mathcal{F}_t^P+\eta^{j'}W_t+\varepsilon_t^j,
+\qquad j\in\{N,F,R\},
+\label{eq:doc_survey_purge}
+\end{equation}
+onde \(\Delta\mathcal{F}_t^P\) é a revisão do proxy de backing construído com
+Prisma Fiscal ou Focus, e \(W_t\) contém controles adicionais de notícias fiscais.
+O residual \(\varepsilon_t^j\) é interpretado conservadoramente como uma inovação
+não racionalizada por backing fiscal observável, não como choque perfeitamente
+desrespaldado.
+
+Assim, a cadeia empírica é: estima-se \(g_t^j\) e obtém-se \(u_t^j\); purga-se
+\(u_t^j\) para obter \(\varepsilon_t^j\); estima-se \(\beta_h^j\) na projeção
+local; e compara-se a ordenação de \(\beta_h^{j,\pi}\) com a ordenação de
+\(\kappa_t^j\). Uma explicação baseada somente em restrição de recursos, depois de
+controlar impulso fiscal e ociosidade, prevê respostas aproximadamente semelhantes
+entre denominações. A diferença de respostas por denominação é, portanto, o conteúdo
+específico do teste FTPL.
+
+\subsection{Projeções locais e hipóteses testáveis}
+
+O choque usado nas projeções locais é o residual survey-purged \(\varepsilon_t^j\),
+e não a emissão bruta diretamente. Para um resultado \(y\) e horizonte \(h\),
+estima-se
+\begin{equation}
+y_{t+h}-y_{t-1}=\alpha_h+\beta_h^N\varepsilon_t^N
++\beta_h^F\varepsilon_t^F+\beta_h^R\varepsilon_t^R
++\Gamma_h'X_{t-1}+\eta_{t+h}.
+\label{eq:doc_local_projection}
+\end{equation}
+Aqui, \(\beta_h^{j,\pi}\) implementa empiricamente o objeto
+\(IRF_\pi^j(h)\). Os testes são
+\begin{equation}
+H_V^{NR}: |\beta_h^{N,\pi}|>|\beta_h^{R,\pi}|,
+\qquad
+H_V^{NFR}: |\beta_h^{N,\pi}|>|\beta_h^{F,\pi}|>|\beta_h^{R,\pi}|.
+\label{eq:doc_empirical_tests}
+\end{equation}
+
+Uma explicação baseada somente em restrição de recursos, depois de controlar o
+impulso fiscal e a ociosidade, prevê respostas aproximadamente semelhantes entre
+denominações. A diferença de respostas por denominação é, portanto, o conteúdo
+específico do teste FTPL. Interações com a participação defasada de NTN-B, validação
+narrativa e uma estratégia IV baseada em demanda regulatória por NTN-B são extensões
+de robustez.
+
+\section{Pipeline inicial de dados}
+
+\subsection{Notebook principal}
+
+O notebook principal é \path{ftpl_build_data_notebook.ipynb}. Ele foi usado para
+construir as bases em \path{data/raw/}, \path{data/clean/} e as figuras em \path{data/figures/}.
+O notebook está no formato de Google Colab, com diretório de saída configurável em
+Google Drive.
+
+As principais tarefas executadas pelo notebook são:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item baixar o histórico de leilões do Tesouro;
+    \item baixar a base de estoque da DPF;
+    \item baixar séries macroeconômicas do BCB/SGS e IPCA;
+    \item mapear instrumentos para os grupos \(N\), \(F\) e \(R\);
+    \item limpar o arquivo de leilões;
+    \item agregar emissão bruta mensal por data de liquidação;
+    \item construir estoque mensal por classe de dívida;
+    \item construir uma proxy de vencimentos programados;
+    \item montar o painel mensal consolidado;
+    \item normalizar emissões e vencimentos por PIB nominal acumulado em 12 meses
+    defasado;
+    \item gerar figuras diagnósticas e de motivação econômica.
+\end{itemize}
+
+\subsection{Arquivos brutos}
+
+\begin{longtable}{p{0.35\textwidth}p{0.55\textwidth}}
+\toprule
+\textbf{Arquivo} & \textbf{Descrição} \\
+\midrule
+\endhead
+\path{data/raw/historico-leiloes-todos.xls} &
+Histórico de leilões do Tesouro Nacional. É a fonte da emissão bruta primária por
+instrumento. \\
+\path{data/raw/estoquedpf.csv} &
+Base de estoque da dívida pública federal. É usada para construir estoques por
+classe, participações e proxy de vencimentos. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Bases limpas já geradas}
+
+\begin{longtable}{p{0.34\textwidth}p{0.12\textwidth}p{0.44\textwidth}}
+\toprule
+\textbf{Arquivo} & \textbf{Linhas} & \textbf{Conteúdo} \\
+\midrule
+\endhead
+\path{data/clean/auction_operations_clean.csv} & 19.604 &
+Operações de leilão limpas, com instrumento, tipo de operação, datas, valor aceito,
+grupo de dívida e indicador de venda de mercado. \\
+\path{data/clean/gross_issuance_long.csv} & 891 &
+Emissão bruta mensal por grupo de dívida em formato longo. \\
+\path{data/clean/gross_issuance_wide.csv} & 318 &
+Emissão bruta mensal em formato largo, com \path{gross_N_brl},
+\path{gross_F_brl}, \path{gross_R_brl} e total \(N+F+R\). \\
+\path{data/clean/macro_monthly.csv} & 559 &
+Painel macro mensal com Selic, IBC-Br, câmbio BRL/USD, IPCA e transformações. \\
+\path{data/clean/debt_stock_monthly.csv} & 104 &
+Estoque mensal de mercado por classe de dívida e participações. \\
+\path{data/clean/scheduled_maturities_proxy.csv} & 59 &
+Proxy de vencimentos programados por classe, baseada em títulos observados em
+\(t-1\) que vencem em \(t\). \\
+\path{data/clean/ftpl_monthly_panel.csv} & 559 &
+Painel mensal combinado com emissões, macro, estoques, participações e proxy de
+vencimentos. \\
+\path{data/clean/ftpl_monthly_panel_with_pib_normalization.csv} & 559 &
+Painel mensal mais recente antes da Etapa A, com normalizações por PIB e variáveis
+curtas como \path{g_N_pib}, \path{g_F_pib}, \path{g_R_pib},
+\path{m_N_pib}, \path{m_F_pib} e \path{m_R_pib}. \\
+\bottomrule
+\end{longtable}
+
+\section{Figuras já produzidas}
+
+A pasta \path{data/figures/} contém gráficos de diagnóstico e motivação, em geral salvos
+em \path{.png} e \path{.pdf}. Entre eles:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item diagnóstico de valores ausentes;
+    \item emissão bruta mensal por classe;
+    \item emissão bruta acumulada em 12 meses;
+    \item participação de cada classe na emissão bruta;
+    \item composição anual da emissão bruta;
+    \item estoque por classe;
+    \item participação no estoque;
+    \item emissão bruta versus proxy de vencimentos para \(N\), \(F\) e \(R\);
+    \item emissão sobre estoque defasado;
+    \item Selic e IPCA;
+    \item matriz de correlação entre emissões, composição e variáveis macro;
+    \item tabela anual de emissão bruta em bilhões de reais.
+\end{itemize}
+
+\section{Etapa A: controles estruturais predeterminados}
+
+\subsection{Motivação}
+
+A Etapa A implementa variáveis estruturais que devem entrar fora de qualquer PCA na
+equação de previsão das emissões. A lógica é construir controles predeterminados,
+isto é, informações disponíveis antes da decisão de emissão no mês \(t\). Esses
+controles serão usados posteriormente para obter inovações de emissão \(u_t^j\).
+
+\subsection{Arquivo de instruções}
+
+As instruções estão em \path{EtapaA.md}. Elas especificam que o código deve:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item inspecionar a estrutura do diretório;
+    \item identificar notebook, scripts e CSVs existentes;
+    \item localizar o painel mensal mais recente;
+    \item ler os nomes reais das colunas antes de programar;
+    \item não sobrescrever arquivos originais;
+    \item criar uma etapa nova do pipeline com script, notebook auxiliar, CSV final,
+    templates manuais, diagnósticos e gráficos.
+\end{itemize}
+
+\subsection{Script implementado}
+
+Foi criado o script \path{src/build_structural_controls.py}. O script:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item usa \path{pathlib.Path};
+    \item detecta automaticamente o painel mais recente;
+    \item imprime os nomes reais das colunas dos arquivos usados;
+    \item cria \path{data/raw/}, \path{data/clean/},
+    \path{data/diagnostics/} e \path{data/figures/};
+    \item cria \path{panel_structural = panel.copy()} antes de transformar os dados;
+    \item salva um arquivo derivado sem sobrescrever o painel original;
+    \item é modular, com funções para diretórios, templates, lags, operações
+    extraordinárias, PAF, reserva de liquidez, listas de controles e diagnósticos;
+    \item força backend gráfico não interativo \path{Agg}, para funcionar localmente
+    no macOS sem janela gráfica;
+    \item usa apenas \path{pandas}, \path{numpy}, \path{matplotlib} e bibliotecas
+    padrão na execução atual.
+\end{itemize}
+
+\subsection{Notebook auxiliar}
+
+Foi criado \path{build_structural_controls.ipynb}, um wrapper simples que executa
+\path{src/build_structural_controls.py}. O objetivo é permitir uso em notebook ou Colab
+sem duplicar a lógica do script.
+
+\subsection{Painel usado como entrada}
+
+O script selecionou como entrada:
+\begin{center}
+\path{data/clean/ftpl_monthly_panel_with_pib_normalization.csv}.
+\end{center}
+Esse painel contém 559 linhas e 58 colunas, cobrindo o período de dezembro de 1979
+a junho de 2026. As colunas reais inspecionadas incluem:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item emissões: \path{g_N_pib}, \path{g_F_pib}, \path{g_R_pib},
+    \path{g_total_NFR_pib};
+    \item participações: \path{share_N}, \path{share_F}, \path{share_R};
+    \item estoques: \path{stock_N_brl}, \path{stock_F_brl}, \path{stock_R_brl},
+    \path{stock_total_NFR_brl};
+    \item vencimentos: \path{m_N_pib}, \path{m_F_pib}, \path{m_R_pib};
+    \item PIB: \path{pib_12m_lag1_brl};
+    \item macro: \path{selic_target_pa}, \path{ibc_br_sa}, \path{brl_usd},
+    \path{ipca_index}, \path{ipca_mom_pct}, \path{ipca_yoy_pct}.
+\end{itemize}
+
+\section{Variáveis construídas na Etapa A}
+
+\subsection{Emissões defasadas}
+
+Foram criadas defasagens configuráveis de emissões normalizadas por PIB, com
+\path{N_LAGS_ISSUANCE = 3}. Para cada uma das séries disponíveis
+\path{g_N_pib}, \path{g_F_pib}, \path{g_R_pib} e
+\path{g_total_NFR_pib}, foram criadas defasagens \path{lag1}, \path{lag2} e
+\path{lag3}.
+
+Também foram criadas médias móveis predeterminadas:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{g_N_pib_ma3_lag1};
+    \item \path{g_F_pib_ma3_lag1};
+    \item \path{g_R_pib_ma3_lag1}.
+\end{itemize}
+
+Essas médias usam apenas informação até \(t-1\).
+
+\subsection{Participações e estoques defasados}
+
+A partir de \path{share_N}, \path{share_F} e \path{share_R}, foram criadas:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{share_N_lag1};
+    \item \path{share_F_lag1};
+    \item \path{share_R_lag1}.
+\end{itemize}
+
+O script também criou o diagnóstico \path{share_sum_structural_check} e o erro
+\path{share_sum_abs_error}. Na execução local, o erro absoluto máximo da soma das
+participações em relação a 1 foi \(2.22 \times 10^{-16}\), isto é, apenas erro de
+arredondamento numérico.
+
+Para estoques, foram criadas as defasagens de \path{stock_N_brl},
+\path{stock_F_brl}, \path{stock_R_brl} e \path{stock_total_NFR_brl}. Como
+\path{pib_12m_lag1_brl} existe, também foram criadas normalizações por PIB:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{stock_N_pib_lag1};
+    \item \path{stock_F_pib_lag1};
+    \item \path{stock_R_pib_lag1};
+    \item \path{stock_total_NFR_pib_lag1}.
+\end{itemize}
+
+\subsection{Vencimentos e janelas futuras}
+
+A partir das variáveis \path{m_N_pib}, \path{m_F_pib} e \path{m_R_pib}, o script
+criou \path{m_total_NFR_pib} quando necessário e depois construiu:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{m_total_NFR_pib_lag0};
+    \item \path{m_total_NFR_pib_lead1};
+    \item \path{m_total_NFR_pib_window_3m};
+    \item \path{m_total_NFR_pib_window_6m};
+    \item \path{m_total_NFR_pib_window_12m};
+    \item \path{m_N_pib_window_3m};
+    \item \path{m_F_pib_window_3m};
+    \item \path{m_R_pib_window_3m}.
+\end{itemize}
+
+O código contém comentário explícito de que janelas futuras de vencimentos só são
+interpretáveis como predeterminadas se o cronograma futuro de vencimentos era
+conhecido em \(t-1\), como ocorre com cronogramas contratuais.
+
+\subsection{Calendário e eventos}
+
+Foram criadas:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{year};
+    \item \path{quarter};
+    \item \path{calendar_month}.
+\end{itemize}
+
+Também foram criadas dummies configuráveis:
+
+\begin{longtable}{p{0.38\textwidth}p{0.42\textwidth}}
+\toprule
+\textbf{Dummy} & \textbf{Período} \\
+\midrule
+\endhead
+\path{dummy_global_financial_crisis} & setembro de 2008 a junho de 2009 \\
+\path{dummy_taper_tantrum} & maio de 2013 a dezembro de 2013 \\
+\path{dummy_domestic_recession_2015_2016} & janeiro de 2015 a dezembro de 2016 \\
+\path{dummy_truckers_strike} & maio de 2018 \\
+\path{dummy_covid} & março de 2020 a dezembro de 2021 \\
+\path{dummy_election_uncertainty} & outubro a dezembro dos anos eleitorais presidenciais 2002, 2006, 2010, 2014, 2018 e 2022 \\
+\bottomrule
+\end{longtable}
+
+\subsection{Operações extraordinárias}
+
+O script inspecionou \path{data/clean/auction_operations_clean.csv}. Os valores reais da
+coluna \path{operation} encontrados foram:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{VENDA};
+    \item \path{COMPRA};
+    \item \path{TROCA};
+    \item \path{EXTRA COMPRA};
+    \item \path{EXTRA VENDA}.
+\end{itemize}
+
+A partir disso, o script criou dummies mensais e medidas de intensidade:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{dummy_extra_sale};
+    \item \path{dummy_extra_purchase};
+    \item \path{dummy_exchange_operation};
+    \item \path{dummy_buyback_operation};
+    \item \path{extra_sale_value_brl} e \path{extra_sale_value_pib};
+    \item \path{extra_purchase_value_brl} e \path{extra_purchase_value_pib};
+    \item \path{exchange_value_brl} e \path{exchange_value_pib};
+    \item \path{buyback_value_brl} e \path{buyback_value_pib}.
+\end{itemize}
+
+Também foram criadas versões defasadas \path{lag1}. A normalização por PIB usa
+\path{pib_12m_lag1_brl}.
+
+\subsection{PAF}
+
+Foi criado o template manual:
+\begin{center}
+\path{data/raw/paf_manual_targets.csv}.
+\end{center}
+
+O template inclui colunas para ano, datas de validade, limites mínimos e máximos
+do PAF por indexador, percentual vincendo em 12 meses, prazo médio, estoque,
+estratégias qualitativas, documento-fonte e notas. Como o arquivo está vazio, as
+variáveis de PAF foram criadas no painel, mas permanecem ausentes até que o
+template seja preenchido.
+
+As variáveis programadas incluem:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item alvos médios: \path{paf_N_target}, \path{paf_F_target},
+    \path{paf_R_target};
+    \item larguras de banda: \path{paf_N_band_width}, \path{paf_F_band_width},
+    \path{paf_R_band_width};
+    \item gaps: \path{paf_gap_N_lag1}, \path{paf_gap_F_lag1},
+    \path{paf_gap_R_lag1};
+    \item distâncias aos limites inferiores e superiores;
+    \item dummies de estar abaixo ou acima da banda;
+    \item dummies de estratégia qualitativa \path{increase}, \path{decrease} e
+    \path{stable} para \(N\), \(F\) e \(R\).
+\end{itemize}
+
+\subsection{Reserva de liquidez}
+
+Foi criado o template manual:
+\begin{center}
+\path{data/raw/treasury_liquidity_reserve_manual.csv}.
+\end{center}
+
+O template contém:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{month};
+    \item \path{liquidity_reserve_brl};
+    \item \path{liquidity_reserve_months_of_debt_service};
+    \item \path{source_document};
+    \item \path{notes}.
+\end{itemize}
+
+Como o template ainda está vazio, as variáveis de reserva de liquidez foram
+criadas, mas ficam ausentes. Quando preenchido, o script criará:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{liquidity_reserve_brl_lag1};
+    \item \path{liquidity_reserve_pib_lag1};
+    \item \path{liquidity_reserve_over_stock_lag1};
+    \item \path{liquidity_reserve_over_maturity_12m_lag1}.
+\end{itemize}
+
+O valor contemporâneo não é usado como controle da emissão de \(t\); a reserva de
+liquidez entra defasada.
+
+\section{Listas finais de controles}
+
+O script salva as listas em
+\path{data/diagnostics/structural_control_lists.json}.
+
+\subsection{Lista base}
+
+A lista \path{structural_controls_base} gerada foi:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{g_N_pib_lag1};
+    \item \path{g_F_pib_lag1};
+    \item \path{g_R_pib_lag1};
+    \item \path{share_N_lag1};
+    \item \path{share_F_lag1};
+    \item \path{share_R_lag1};
+    \item \path{paf_gap_N_lag1};
+    \item \path{paf_gap_F_lag1};
+    \item \path{paf_gap_R_lag1};
+    \item \path{liquidity_reserve_pib_lag1};
+    \item \path{m_total_NFR_pib_window_3m}.
+\end{itemize}
+
+\subsection{Lista estendida}
+
+A lista \path{structural_controls_extended} inclui a lista base e adiciona:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item defasagens adicionais de emissão;
+    \item médias móveis de emissão;
+    \item dummies de crise e eleição;
+    \item dummies e intensidades de operações extraordinárias;
+    \item dummies qualitativas do PAF;
+    \item distâncias às bandas do PAF;
+    \item reserva de liquidez sobre estoque e vencimentos;
+    \item janelas de vencimentos de 6 e 12 meses;
+    \item janelas de vencimentos de 3 meses por classe.
+\end{itemize}
+
+Na execução atual, nenhum candidato esperado ficou ausente como coluna. Algumas
+colunas, porém, estão completamente vazias porque dependem de templates manuais
+ainda não preenchidos.
+
+\section{Testes e diagnósticos executados}
+
+\subsection{Execução local do script}
+
+O script foi executado localmente com:
+\begin{center}
+\path{python3 src/build_structural_controls.py}.
+\end{center}
+
+Houve um problema inicial relacionado ao cache de fontes do \path{matplotlib} no
+macOS. O script foi ajustado para criar \path{data/.mplconfig} e forçar o
+backend \path{Agg}. Após esse ajuste, a execução terminou sem erro.
+
+O resultado principal foi:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item painel final salvo em
+    \path{data/clean/ftpl_monthly_panel_structural_controls.csv};
+    \item dimensões: 559 linhas por 190 colunas;
+    \item período: dezembro de 1979 a junho de 2026.
+\end{itemize}
+
+\subsection{Inspeção de colunas reais}
+
+Antes da programação da Etapa A, foram inspecionados os nomes reais das colunas dos
+CSVs. Isso confirmou que o painel mais recente tinha as variáveis normalizadas por
+PIB e que a base de leilões tinha a coluna \path{operation}. Essa inspeção evitou
+dependência de nomes assumidos na discussão.
+
+\subsection{Teste das operações extraordinárias}
+
+Foi verificada a distribuição real da coluna \path{operation} em
+\path{auction_operations_clean.csv}. As categorias observadas permitiram mapear:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{EXTRA VENDA} para venda extraordinária;
+    \item \path{EXTRA COMPRA} para compra extraordinária;
+    \item \path{TROCA} para operação de troca;
+    \item \path{COMPRA} para recompra ou buyback.
+\end{itemize}
+
+Com isso, o script agregou operações por mês e gerou dummies e valores mensais.
+
+\subsection{Diagnósticos salvos}
+
+Foram salvos em \path{data/diagnostics/}:
+
+\begin{longtable}{p{0.42\textwidth}p{0.48\textwidth}}
+\toprule
+\textbf{Arquivo} & \textbf{Conteúdo} \\
+\midrule
+\endhead
+\path{structural_controls_missingness.csv} &
+Tabela de valores ausentes das variáveis estruturais. \\
+\path{structural_controls_descriptive_stats.csv} &
+Estatísticas descritivas das variáveis estruturais numéricas. \\
+\path{structural_controls_main_correlation.csv} &
+Matriz de correlação das variáveis estruturais principais. \\
+\path{structural_controls_alerts.csv} &
+Alertas de variáveis com menos de 50\% de observações não ausentes ou variáveis
+constantes/quase constantes. \\
+\path{structural_control_lists.json} &
+Listas finais de controles base e estendida, além de candidatos ausentes. \\
+\bottomrule
+\end{longtable}
+
+Foi salvo em \path{data/figures/}:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{structural_controls_main_correlation.png}.
+\end{itemize}
+
+O gráfico de PAF versus participações efetivas e o gráfico de reserva de liquidez
+não foram gerados nesta execução porque os templates manuais correspondentes ainda
+estão vazios.
+
+\subsection{Alertas relevantes}
+
+Os diagnósticos apontaram:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{share_N_lag1}, \path{share_F_lag1} e \path{share_R_lag1} têm menos
+    de 50\% de observações não ausentes, refletindo a cobertura mais curta dos
+    estoques;
+    \item na execução inicial, variáveis de PAF e reserva de liquidez estavam
+    ausentes porque os templates ainda não haviam sido preenchidos; posteriormente
+    esses templates foram completados e reintegrados ao painel;
+    \item dummies de eventos e operações aparecem como quase constantes por serem
+    variáveis binárias com poucos episódios, o que é esperado.
+\end{itemize}
+
+\section{Preenchimento auditável dos templates manuais}
+
+Após a implementação inicial da Etapa A, os templates de PAF e reserva de liquidez
+foram preenchidos com fontes oficiais. A lógica do pipeline principal não foi
+alterada. O preenchimento foi feito em uma etapa auxiliar, preservando os nomes
+originais das colunas dos templates e criando backups antes de qualquer escrita.
+
+\subsection{Backups e segurança}
+
+Antes do preenchimento, foram criados os backups:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{data/raw/paf_manual_targets_backup_20260630.csv};
+    \item \path{data/raw/treasury_liquidity_reserve_manual_backup_20260630.csv}.
+\end{itemize}
+
+Os templates originais estavam vazios, contendo apenas cabeçalhos. Os nomes das
+colunas foram preservados exatamente.
+
+\subsection{Script auxiliar de preenchimento}
+
+Foi criado o script \path{src/fill_manual_templates_official_sources.py}. Este script é
+separado do pipeline principal e tem apenas a função de preencher os templates
+manuais e gerar arquivos de auditoria. Ele não altera a especificação econométrica
+nem a lógica de construção das variáveis estruturais.
+
+O script usa:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{openpyxl} para ler anexos oficiais em \path{.xlsx};
+    \item \path{pandas} para organizar e salvar os CSVs;
+    \item fontes baixadas em \path{data/raw/paf_sources/} e
+    \path{data/raw/liquidity_sources/}.
+\end{itemize}
+
+\subsection{Fontes oficiais para o PAF}
+
+Para o PAF, foram usadas duas fontes oficiais:
+
+\begin{enumerate}[leftmargin=1.2cm]
+    \item O anexo oficial do RMD de maio de 2026, arquivo
+    \path{Anexo RMD_Maio_26.xlsx}, aba \path{5.7 - Acompanhamento dos Planos
+    Anuais de Financiamento da DPF}. Essa fonte contém dados estruturados dos PAFs
+    de 2003 a 2022.
+    \item Os PDFs oficiais do Plano Anual de Financiamento para 2023, 2024, 2025 e
+    2026, baixados das páginas oficiais do Tesouro Transparente.
+\end{enumerate}
+
+Arquivos brutos preservados:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{data/raw/paf_sources/PAF_2023.pdf};
+    \item \path{data/raw/paf_sources/PAF_2024.pdf};
+    \item \path{data/raw/paf_sources/PAF_2025.pdf};
+    \item \path{data/raw/paf_sources/PAF_2026.pdf};
+    \item \path{data/raw/paf_sources/Apresentacao_PAF_26_RAD25.pdf};
+    \item páginas HTML intermediárias com os links oficiais das publicações.
+\end{itemize}
+
+O template preenchido é:
+\begin{center}
+\path{data/raw/paf_manual_targets.csv}.
+\end{center}
+
+Ele contém 24 linhas, cobrindo os anos de 2003 a 2026. As bandas numéricas foram
+preenchidas para:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item participação de prefixados;
+    \item participação de títulos remunerados pela Selic ou taxa flutuante;
+    \item participação de títulos indexados a índices de preços;
+    \item participação cambial;
+    \item percentual vincendo em 12 meses;
+    \item prazo médio;
+    \item estoque da DPF.
+\end{itemize}
+
+As participações foram convertidas de percentual para proporção. Valores de estoque
+reportados em R\$ bilhões foram convertidos para reais. As diretrizes qualitativas
+foram mantidas como \path{unclear}, por conservadorismo: as fontes usadas trazem
+bandas quantitativas claras, mas não permitem uma codificação anual inequívoca de
+\path{increase}, \path{decrease} ou \path{stable} para todos os indexadores.
+
+\subsection{Auditoria do PAF}
+
+Foi criado:
+\begin{center}
+\path{data/diagnostics/paf_manual_targets_audit.csv}.
+\end{center}
+
+O arquivo contém 336 registros de auditoria, com as colunas:
+\path{year}, \path{variable}, \path{value}, \path{source_document},
+\path{source_url}, \path{source_file}, \path{page_or_table},
+\path{extraction_note} e \path{confidence}.
+
+A confiança foi classificada como:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{high} para valores extraídos da aba estruturada oficial do RMD;
+    \item \path{medium} para valores extraídos dos quadros claros dos PDFs oficiais
+    do PAF.
+\end{itemize}
+
+\subsection{Fonte oficial para a reserva de liquidez}
+
+A reserva de liquidez foi extraída do anexo oficial do RMD de maio de 2026:
+
+\begin{center}
+\path{data/raw/liquidity_sources/Anexo RMD_Maio_26.xlsx}.
+\end{center}
+
+A variável está na aba \path{6.1 - Reserva de Liquidez}. A tabela contém:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{Mês};
+    \item \path{Reserva de Liquidez}, em R\$ bilhões;
+    \item \path{Valor Prudencial (3 meses)}, em R\$ bilhões;
+    \item \path{Índice de Liquidez}, em meses.
+\end{itemize}
+
+O template preenchido é:
+\begin{center}
+\path{data/raw/treasury_liquidity_reserve_manual.csv}.
+\end{center}
+
+Ele contém 137 observações mensais, de janeiro de 2015 a maio de 2026. A reserva
+foi convertida de R\$ bilhões para reais. O índice de liquidez foi mantido em meses
+e armazenado em \path{liquidity_reserve_months_of_debt_service}.
+
+\subsection{Auditoria da reserva de liquidez}
+
+Foi criado:
+\begin{center}
+\path{data/diagnostics/treasury_liquidity_reserve_audit.csv}.
+\end{center}
+
+O arquivo contém 274 registros de auditoria: dois registros por mês, um para
+\path{liquidity_reserve_brl} e outro para
+\path{liquidity_reserve_months_of_debt_service}. A fonte é uma tabela estruturada
+oficial, por isso a confiança foi classificada como \path{high}.
+
+\subsection{Reintegração no painel estrutural}
+
+Depois de preencher os templates, o script \path{src/build_structural_controls.py} foi
+executado novamente. O painel atualizado foi salvo em:
+
+\begin{center}
+\path{data/clean/ftpl_monthly_panel_structural_controls.csv}.
+\end{center}
+
+O painel passou a ter 559 linhas e 192 colunas. A cobertura das principais
+variáveis integradas ficou:
+
+\begin{longtable}{p{0.55\textwidth}r p{0.14\textwidth}p{0.14\textwidth}}
+\toprule
+\textbf{Variável} & \textbf{Obs. não ausentes} & \textbf{Início} & \textbf{Fim} \\
+\midrule
+\endhead
+\path{paf_N_target} & 282 & 2003-01 & 2026-06 \\
+\path{paf_F_target} & 282 & 2003-01 & 2026-06 \\
+\path{paf_R_target} & 282 & 2003-01 & 2026-06 \\
+\path{paf_gap_N_lag1} & 104 & 2017-10 & 2026-05 \\
+\path{paf_gap_F_lag1} & 104 & 2017-10 & 2026-05 \\
+\path{paf_gap_R_lag1} & 104 & 2017-10 & 2026-05 \\
+\path{liquidity_reserve_brl_lag1} & 137 & 2015-02 & 2026-06 \\
+\path{liquidity_reserve_pib_lag1} & 136 & 2015-02 & 2026-05 \\
+\path{liquidity_reserve_over_stock_lag1} & 104 & 2017-10 & 2026-05 \\
+\path{liquidity_reserve_over_maturity_12m_lag1} & 114 & 2016-12 & 2026-05 \\
+\bottomrule
+\end{longtable}
+
+Os gaps de PAF têm menos observações do que os alvos porque dependem das
+participações efetivas defasadas \path{share_N_lag1}, \path{share_F_lag1} e
+\path{share_R_lag1}, cuja cobertura começa apenas quando a base de estoque está
+disponível.
+
+\subsection{Diagnósticos e gráficos adicionais}
+
+Além dos diagnósticos gerais da Etapa A, foram criados:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{data/diagnostics/manual_templates_integration_summary.csv};
+    \item \path{data/diagnostics/manual_templates_coverage_summary.csv};
+    \item \path{data/figures/paf_effective_shares_vs_bands_manual_filled.png};
+    \item \path{data/figures/liquidity_reserve_brl_billion.png};
+    \item \path{data/figures/liquidity_reserve_pib_lag1_pct.png};
+    \item \path{data/figures/liquidity_reserve_over_maturity_12m_lag1.png}.
+\end{itemize}
+
+Após o preenchimento, o gráfico de participações efetivas versus bandas do PAF e os
+gráficos da reserva de liquidez passaram a ser gerados.
+
+\section{Etapa B: bloco de curva de juros ANBIMA}
+
+A Etapa B foi implementada para criar controles predeterminados de curva de juros
+que poderão entrar no vetor \(Z_{t-1}\) da equação de previsão de emissões. O
+objetivo é construir medidas de nível, inclinação e curvatura para curvas
+prefixadas e reais indexadas ao IPCA, além de inflação implícita e fatores obtidos
+por PCA.
+
+\subsection{Script e painel de entrada}
+
+Foi criado o script \path{src/build_anbima_yield_curve_controls.py}, acompanhado do
+notebook auxiliar \path{build_anbima_yield_curve_controls.ipynb}. O script usa
+\path{pathlib.Path}, cria os diretórios necessários, inspeciona o painel mensal
+disponível e preserva o painel estrutural original.
+
+O painel selecionado automaticamente foi:
+\begin{center}
+\path{data/clean/ftpl_monthly_panel_structural_controls.csv}.
+\end{center}
+
+Ele contém 559 observações mensais, de dezembro de 1979 a junho de 2026, e 192
+colunas. A integração da Etapa B produziu um painel derivado com 559 observações e
+264 colunas em:
+\begin{center}
+\path{data/clean/ftpl_monthly_panel_with_yield_curve_controls.csv}.
+\end{center}
+
+\subsection{Fontes e situação da API}
+
+O script foi preparado para usar a API ANBIMA Developers, sem credenciais
+hardcoded, por meio de variáveis de ambiente como
+\path{ANBIMA_ACCESS_TOKEN}, \path{ANBIMA_CLIENT_ID},
+\path{ANBIMA_CLIENT_SECRET}, \path{ANBIMA_TOKEN_URL} e
+\path{ANBIMA_API_BASE}. A documentação oficial consultada foi:
+\begin{center}
+\url{https://developers.anbima.com.br/pt/}\\
+\url{https://developers.anbima.com.br/pt/documentacao/precos-indices/apis-de-precos/titulos-publicos/}
+\end{center}
+
+Na execução local documentada, não havia credenciais nem
+\path{ANBIMA_API_BASE} configurado. Por isso, a API não foi chamada e nenhum
+valor de curva foi inventado. Também não havia arquivos históricos ANBIMA locais
+compatíveis com o parser. O fato foi registrado em
+\path{data/diagnostics/anbima_yield_curve_audit.csv}.
+
+Como fallback, foi criado o template:
+\begin{center}
+\path{data/raw/anbima/anbima_yield_curve_manual_template.csv}.
+\end{center}
+
+O template aceita as colunas \path{date}, \path{curve_type},
+\path{vertex_du}, \path{yield_pct}, \path{source_document} e \path{notes}.
+Os tipos padronizados são \path{PRE}, \path{IPCA} e \path{BEI}. A documentação
+auxiliar está em \path{data/raw/anbima/README_anbima_manual_template.txt}.
+
+\subsection{Bases intermediárias e transformação}
+
+O script aceita fontes em CSV, XLS, XLSX, JSON e Parquet e tenta detectar
+automaticamente colunas de data, tipo de curva, vértice e taxa. As curvas são
+armazenadas em formato longo e convertidas para os vértices-alvo de 63, 126, 252,
+504, 756, 1260, 1764 e 2520 dias úteis. A interpolação é linear por data e tipo de
+curva e não extrapola além dos vértices observados.
+
+As bases produzidas são:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{data/intermediate/anbima/anbima_yield_curves_daily_long.csv};
+    \item \path{data/intermediate/anbima/anbima_yield_curves_daily_wide.csv};
+    \item \path{data/intermediate/anbima/anbima_yield_curve_features_daily.csv};
+    \item \path{data/intermediate/anbima/anbima_yield_curve_features_monthly.csv};
+    \item \path{data/intermediate/anbima/anbima_yield_curve_pca_factors_monthly.csv}.
+\end{itemize}
+
+Como não houve dados de origem na execução, as bases diárias ficaram sem
+observações, enquanto a base mensal foi criada com 559 meses e colunas preenchidas
+com \path{NaN}. Isso permite que o restante do painel seja usado sem misturar
+valores fictícios com os controles observados.
+
+\subsection{Variáveis e predeterminação}
+
+Para cada curva, o código está preparado para calcular os vértices
+\path{3m}, \path{6m}, \path{1y}, \path{2y}, \path{3y}, \path{5y}, \path{7y} e
+\path{10y}. A inflação implícita é calculada apenas quando as curvas prefixada e
+IPCA existem na mesma data e no mesmo vértice:
+\[
+    BEI_h = PRE_h - IPCA_h.
+\]
+
+As medidas simples incluem nível de cinco anos, inclinações de 5--1 e 10--2 anos
+e curvatura de 1--5--10 anos. Para respeitar a ordem temporal da equação de
+emissões, foram criadas duas agregações mensais:
+
+\begin{enumerate}[leftmargin=1.2cm]
+    \item último dia útil observado até o fim do mês anterior, com sufixo
+    \path{_eom_lag1};
+    \item média das observações diárias do mês anterior, com sufixo
+    \path{_avg_lag1}.
+\end{enumerate}
+
+O código não usa observações do próprio mês da emissão para esses controles.
+
+\subsection{PCA e diagnósticos da Etapa B}
+
+O script contém PCA separado para os blocos prefixado, IPCA e BEI, com até três
+componentes, padronização das variáveis e opção de janela expansiva com janela
+mínima de 60 meses. A implementação usa decomposição SVD do \path{numpy}, evitando
+dependência obrigatória do \path{scikit-learn}.
+
+Foram preparados os arquivos:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{data/diagnostics/anbima_yield_curve_diagnostics.csv};
+    \item \path{data/diagnostics/anbima_yield_curve_audit.csv};
+    \item \path{data/diagnostics/anbima_yield_curve_descriptive_stats.csv};
+    \item \path{data/diagnostics/anbima_yield_curve_correlations.csv};
+    \item \path{data/diagnostics/anbima_yield_curve_pca_explained_variance.csv};
+    \item \path{data/diagnostics/anbima_yield_curve_pca_loadings.csv};
+    \item \path{data/diagnostics/yield_curve_control_lists.json}.
+\end{itemize}
+
+Na execução atual, as listas baseline e estendida contêm os nomes das variáveis
+esperadas no painel, mas todos os seus valores são \path{NaN}. A lista de PCA não
+contém componentes observados porque não houve dados completos para estimação.
+
+\subsection{Teste executado e resultado}
+
+O comando \path{python3 src/build_anbima_yield_curve_controls.py} foi executado com
+sucesso. O script confirmou o painel de entrada, criou as bases intermediárias,
+integrou as colunas de curva ao painel derivado e produziu os arquivos de auditoria.
+A compilação sintática também foi verificada com
+\path{PYTHONPYCACHEPREFIX=data/.pycache python3 -m py_compile
+build_anbima_yield_curve_controls.py}.
+
+O próximo passo da Etapa B é obter acesso autenticado à API ANBIMA, ou preencher o
+template manual com arquivos oficiais. Depois disso, o script deve ser reexecutado
+e os diagnósticos de interpolação, cobertura, PCA e predeterminação devem ser
+revisados antes da estimação das equações de emissão.
+
+\section{Estado atual do projeto}
+
+O projeto está na transição entre a construção de dados e a implementação
+econométrica dos choques de emissão.
+
+\subsection{Concluído ou substancialmente implementado}
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item modelo teórico da ordenação de elasticidades por denominação da dívida;
+    \item texto principal de proposta empírica;
+    \item nota metodológica de construção de choques de emissão com vencimentos;
+    \item coleta e limpeza inicial dos dados de leilões, estoques e macro;
+    \item painel mensal com normalização por PIB;
+    \item figuras diagnósticas e de motivação;
+    \item criação de repositório Git local;
+    \item documentação sintética em \path{Project.md};
+    \item implementação da Etapa A em \path{src/build_structural_controls.py};
+    \item painel estrutural em
+    \path{data/clean/ftpl_monthly_panel_structural_controls.csv};
+    \item templates manuais preenchidos para PAF e reserva de liquidez;
+    \item arquivos brutos oficiais preservados para auditoria;
+    \item arquivos de auditoria para PAF e reserva de liquidez;
+    \item diagnósticos formais da Etapa A e da reintegração dos templates.
+    \item estrutura da Etapa B para curvas de juros, fallback manual, agregação
+    mensal predeterminada e PCA;
+    \item painel derivado com as colunas de curva e auditoria da tentativa de acesso
+    à ANBIMA.
+\end{itemize}
+
+\subsection{Ainda pendente}
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item revisar manualmente, se desejado, as diretrizes qualitativas do PAF, hoje
+    mantidas como \path{unclear};
+    \item complementar datas exatas de publicação dos PAFs, se forem necessárias
+    para janelas de validade mais precisas;
+    \item incorporar expectativas fiscais Prisma ou Focus;
+    \item construir revisões de backing fiscal;
+    \item estimar equações de previsão de emissão por \(N\), \(F\) e \(R\);
+    \item obter resíduos de emissão e choques survey-purged;
+    \item obter dados autenticados da ANBIMA ou preencher o template manual e
+    validar os fatores de curva de juros, yields reais e inflação implícita;
+    \item adicionar spreads soberanos e demais variáveis de valuation;
+    \item implementar projeções locais;
+    \item testar formalmente as restrições \(N > R\) e \(N > F > R\);
+    \item construir validação narrativa e exercícios de robustez.
+\end{itemize}
+
+\section{Observações de reprodutibilidade}
+
+O código da Etapa A foi escrito para não sobrescrever arquivos originais. A saída
+principal é colocada em \path{data/clean/}. A lógica de templates manuais
+permite manter PAF e reserva de liquidez como fontes auditáveis, mesmo que no futuro
+alguma coleta automática seja adicionada.
+
+Durante a execução local, foi necessário instalar \path{pandas} e \path{requests}
+no Python do sistema, pois o ambiente local inicialmente não tinha essas
+dependências. A execução final do script terminou sem erro após o ajuste do backend
+do \path{matplotlib}.
+
+\end{document}

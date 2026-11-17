@@ -1,0 +1,128 @@
+\documentclass[11pt,a4paper]{article}
+
+% ------------------------------------------------------------
+% Packages
+% ------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{hyperref}
+
+% ------------------------------------------------------------
+% Page setup
+% ------------------------------------------------------------
+\geometry{
+    left=2.5cm,
+    right=2.5cm,
+    top=2.5cm,
+    bottom=2.5cm
+}
+
+\onehalfspacing
+
+% ------------------------------------------------------------
+% Title
+% ------------------------------------------------------------
+\title{Nota sobre Emiss\~oes Brutas e L\'iquidas na Constru\c{c}\~ao dos Choques de D\'ivida}
+\author{}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Nota sobre emiss\~oes brutas e l\'iquidas}
+
+A emiss\~ao bruta de mercado por classe de d\'ivida \(j\in\{N,F,R\}\) pode ser definida diretamente a partir dos leil\~oes prim\'arios como
+\[
+G_t^j
+=
+Venda_t^j
++
+ExtraVenda_t^j,
+\]
+onde \(N\) corresponde a LTN e NTN-F, \(F\) a LFT, e \(R\) a NTN-B. Esta medida captura o valor financeiro colocado pelo Tesouro no mercado em cada classe de t\'itulo.
+
+No arquivo de leil\~oes, \(Venda_t^j\) representa as vendas ordin\'arias de t\'itulos da classe \(j\), enquanto \(ExtraVenda_t^j\) representa vendas extraordin\'arias da mesma classe. Assim, \(ExtraVenda_t^j\) n\~ao \'e recompra, resgate ou troca; trata-se de uma coloca\c{c}\~ao adicional de t\'itulos no mercado, possivelmente realizada fora do leil\~ao ordin\'ario regular ou em resposta a condi\c{c}\~oes espec\'ificas de caixa, demanda, liquidez ou gest\~ao da d\'ivida. Por ter o mesmo sinal econ\^omico de uma venda ordin\'aria, ela deve ser somada \`a emiss\~ao bruta.
+
+A emiss\~ao l\'iquida, por sua vez, n\~ao \'e uma medida única. Uma defini\c{c}\~ao operacional baseada em leil\~oes seria
+\[
+I_t^{j,\mathrm{liq,mercado}}
+=
+Venda_t^j
++
+ExtraVenda_t^j
+-
+Compra_t^j
+-
+ExtraCompra_t^j
++
+TrocaIn_t^j
+-
+TrocaOut_t^j,
+\]
+caso seja poss\'ivel identificar separadamente os dois lados das opera\c{c}\~oes de troca. Nesta express\~ao, \(Compra_t^j\) representa compras ou recompras ordin\'arias de t\'itulos da classe \(j\) pelo Tesouro, enquanto \(ExtraCompra_t^j\) representa compras extraordin\'arias. Ambas t\^em sinal negativo porque reduzem o volume l\'iquido de t\'itulos da classe \(j\) em poder do mercado. Em outras palavras, \(ExtraCompra_t^j\) \'e uma recompra extraordin\'aria ou opera\c{c}\~ao extraordin\'aria de retirada de t\'itulos do mercado, e n\~ao uma emiss\~ao.
+
+As vari\'aveis \(TrocaIn_t^j\) e \(TrocaOut_t^j\) capturam os dois lados de opera\c{c}\~oes de troca. Em uma troca, o Tesouro entrega ou emite um t\'itulo novo e recebe de volta um t\'itulo antigo. Assim, \(TrocaIn_t^j\) denota o valor financeiro dos t\'itulos da classe \(j\) entregues pelo Tesouro ao mercado na troca, isto \'e, o lado de emiss\~ao da opera\c{c}\~ao. J\'a \(TrocaOut_t^j\) denota o valor financeiro dos t\'itulos da classe \(j\) recebidos pelo Tesouro e retirados do mercado na troca, isto \'e, o lado de resgate da opera\c{c}\~ao. Uma mesma opera\c{c}\~ao de troca pode, portanto, aumentar a emiss\~ao l\'iquida de uma classe e reduzir a de outra. Sem a separa\c{c}\~ao entre \(TrocaIn_t^j\) e \(TrocaOut_t^j\), as trocas podem misturar emiss\~ao de um t\'itulo novo com resgate de outro t\'itulo, possivelmente de classe diferente.
+
+J\'a a emiss\~ao l\'iquida oficial agregada da DPF ou da DPMFi \'e usualmente definida como
+\[
+I_t^{\mathrm{liq,oficial}}
+=
+Emissoes_t
+-
+Resgates_t,
+\]
+em que os resgates podem incluir vencimentos de principal, pagamentos de cupons, recompras, compras antecipadas, opera\c{c}\~oes de troca, cancelamentos e outras opera\c{c}\~oes diretas, dependendo da cobertura da estat\'istica utilizada. Finalmente, uma medida inferida a partir da varia\c{c}\~ao do estoque satisfaz uma identidade cont\'abil do tipo
+\[
+\Delta B_t^j
+=
+I_t^{j,\mathrm{liq}}
++
+Juros_t^j
++
+Indexacao_t^j
++
+Ajustes_t^j,
+\]
+ou, de forma equivalente,
+\[
+I_t^{j,\mathrm{liq}}
+=
+\Delta B_t^j
+-
+Juros_t^j
+-
+Indexacao_t^j
+-
+Ajustes_t^j.
+\]
+Esta \'ultima constru\c{c}\~ao \'e particularmente delicada para LFT e NTN-B, pois a varia\c{c}\~ao do estoque incorpora mecanicamente a apropria\c{c}\~ao da Selic e a corre\c{c}\~ao pelo IPCA, respectivamente.
+
+Por esses motivos, a emiss\~ao l\'iquida tende a misturar v\'arias margens de decis\~ao e de ajuste: a decis\~ao de coloca\c{c}\~ao prim\'aria, o calend\'ario de vencimentos, recompras, opera\c{c}\~oes de troca, pagamentos de cupons, indexa\c{c}\~ao, juros apropriados e ajustes cont\'abeis. Al\'em disso, algumas dessas margens s\~ao respostas end\'ogenas ao ambiente macroecon\^omico e financeiro. Em per\'iodos de estresse, por exemplo, o Tesouro pode alterar recompras, trocas e composi\c{c}\~ao das coloca\c{c}\~oes em resposta a condi\c{c}\~oes de liquidez, risco soberano, inclina\c{c}\~ao da curva de juros ou demanda dos investidores.
+
+Assim, para a especifica\c{c}\~ao principal, parece prefer\'ivel construir os choques a partir das emiss\~oes brutas por instrumento. A emiss\~ao bruta \'e mais pr\'oxima da decis\~ao marginal de coloca\c{c}\~ao do Tesouro e permite separar, na primeira etapa, a parte previs\'ivel da emiss\~ao associada a vencimentos programados, composi\c{c}\~ao defasada da d\'ivida, PAF, reserva de liquidez e condi\c{c}\~oes macrofinanceiras:
+\[
+g_t^j
+=
+\alpha^j
++
+\delta_0^j m_{t\mid t-1}^j
++
+\delta_1^j m_{t+1\mid t-1}^j
++
+\Lambda^{j\prime}Z_{t-1}
++
+\mu_{m(t)}^j
++
+\nu_t^j.
+\]
+O res\'iduo \(\nu_t^j\) pode ent\~ao ser interpretado como uma inova\c{c}\~ao na coloca\c{c}\~ao bruta da classe \(j\), condicional ao conjunto de informa\c{c}\~ao observado. Essa abordagem facilita a distin\c{c}\~ao entre a decis\~ao de emitir e outras decis\~oes de gest\~ao da d\'ivida que o Tesouro pode tomar simultaneamente em resposta ao ambiente macrofinanceiro.
+
+As emiss\~oes l\'iquidas continuam sendo úteis como exerc\'icio de robustez, desde que a defini\c{c}\~ao utilizada seja explicitada com precis\~ao. Em particular, deve-se distinguir entre emiss\~ao l\'iquida de mercado baseada em leil\~oes, emiss\~ao l\'iquida oficial agregada e emiss\~ao l\'iquida inferida por varia\c{c}\~oes de estoque. No entanto, por transpar\^encia e menor risco de contaminar os choques com juros, indexa\c{c}\~ao e ajustes end\'ogenos, a identifica\c{c}\~ao principal deve se basear nas emiss\~oes brutas por instrumento.
+
+\end{document}

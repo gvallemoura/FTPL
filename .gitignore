@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+data/.mplconfig/
+
+# LaTeX build files (sources, .bbl and PDFs are tracked)
+*.aux
+*.log
+*.out
+*.toc
+*.blg
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+
+# Third-party replication package (Carvalho Filho 2026, doi:10.5281/zenodo.24206681);
+# re-download from Zenodo. Only its method is used, in src/build_fiscal_expectations_controls.py.
+data/raw/zenodo_24206681_fiscal_svar/
+
+# Local snapshot taken before the Nov 2026 folder reorganisation
+backups/
+
+# Credentials
+.env

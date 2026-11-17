@@ -1,0 +1,11 @@
+variable,n_non_missing,first_month,last_month
+paf_N_target,282,2003-01-01,2026-06-01
+paf_F_target,282,2003-01-01,2026-06-01
+paf_R_target,282,2003-01-01,2026-06-01
+paf_gap_N_lag1,104,2017-10-01,2026-05-01
+paf_gap_F_lag1,104,2017-10-01,2026-05-01
+paf_gap_R_lag1,104,2017-10-01,2026-05-01
+liquidity_reserve_brl_lag1,137,2015-02-01,2026-06-01
+liquidity_reserve_pib_lag1,136,2015-02-01,2026-05-01
+liquidity_reserve_over_stock_lag1,104,2017-10-01,2026-05-01
+liquidity_reserve_over_maturity_12m_lag1,114,2016-12-01,2026-05-01

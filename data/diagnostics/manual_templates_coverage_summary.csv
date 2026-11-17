@@ -1,0 +1,3 @@
+source,n_rows,first_period,last_period,notes
+PAF manual targets,24,2003,2026,PAF bands from official RMD annex sheet 5.7 for 2003-2022 and official PAF PDFs for 2023-2026.
+Treasury liquidity reserve,137,2015-01-01,2026-05-01,"RMD May/2026 official annex sheet 6.1, values converted from R$ billions to reais."
