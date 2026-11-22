@@ -1142,7 +1142,7 @@ partir dos arquivos mensais congelados do pacote de replicação de Carvalho Fil
 no Git e deve ser baixado do Zenodo para \path{data/raw/zenodo_24206681_fiscal_svar/}.
 O painel resultante,
 \path{data/clean/ftpl_monthly_panel_with_valuation_outcomes.csv}, com 564 linhas e
-350 colunas, é o painel mais completo do projeto.
+350 colunas.
 
 \begin{longtable}{p{0.30\textwidth}p{0.42\textwidth}p{0.18\textwidth}}
 \toprule
@@ -1166,6 +1166,92 @@ são médias mensais de dados diários; por isso não há versão \path{_eom_lag
 constrói inflação implícita, pois o pacote não contém juros nominais e reais no mesmo
 prazo. Na emenda do EMBI, o EMBI+ e o EMBI GD têm correlação de 0,994 nos níveis no
 período comum; o EMBI emendado e o CDS têm correlação de 0,92 nos níveis.
+
+\section{Estoque e participações por classe desde 2000}
+
+As colunas de estoque e participação por classe do painel vêm do arquivo
+\path{estoquedpf.csv} do Tesouro (eDPF), que só começa em setembro de 2017. Como as
+participações defasadas entram nas equações de emissão, isso restringia a amostra.
+O script \path{src/build_stock_history_sgs.py} estende essas variáveis para
+2000-02 a 2026-09 com séries do SGS/BCB de títulos federais em poder do mercado
+(``posição em carteira'', excluída a carteira do Banco Central), em R\$ milhões.
+
+\begin{longtable}{p{0.12\textwidth}p{0.55\textwidth}p{0.23\textwidth}}
+\toprule
+\textbf{SGS} & \textbf{Série} & \textbf{Uso} \\
+\midrule
+\endhead
+10634 & LFT & \(F\) \\
+10642 & NTN-B & \(R\) \\
+10649 & LTN & parcela de \(N\) \\
+10651 & total de prefixados & \(N\) \\
+10650 & item prefixado residual, 2002-02 a 2005-09, até R\$ 0,12 bi & excluído \\
+10647 & NTN-C & cobertura \\
+4154 & total de títulos do Tesouro em mercado & denominador \\
+\bottomrule
+\end{longtable}
+
+O bloco nominal é \(N = 10651 - 10650\), isto é, LTN mais NTN-F. A NTN-F não tem série
+própria no SGS; o valor implícito nunca é negativo, a não ser por arredondamento de
+\(\pm 1\), e passa a ser relevante em fevereiro de 2005. Os arquivos brutos são salvos
+em \path{data/raw/bcb/} com carimbo de data e hora UTC e nunca são sobrescritos; a
+opção \path{--offline} reutiliza o download mais recente.
+
+\subsection{Emenda e validação}
+
+A regra de emenda usa o eDPF onde ele existe (2017-09 a 2026-04) e o SGS nos demais
+meses (2000-02 a 2017-08 e 2026-05 a 2026-09). A coluna \path{stock_hist_source}
+registra a origem de cada mês. Nos 104 meses comuns, os níveis do SGS e do eDPF
+diferem em no máximo 0,004\%, as participações em menos de 0,001 ponto percentual e
+as variações mensais têm correlação 1,0 sem defasagem; a data do SGS no dia 1 corresponde,
+portanto, ao estoque de fim daquele mês. O script interrompe a execução se a
+diferença de nível passar de 0,5\% ou se a NTN-F implícita ficar negativa. Nos meses
+do eDPF, as novas participações reproduzem exatamente as colunas \path{share_*}.
+
+\subsection{Variáveis e cobertura}
+
+São 32 colunas novas, sem alterar nenhuma coluna existente:
+\path{stock_{N,F,R,total_NFR}_hist_brl}; \path{share_{g}_hist}, sobre \(N+F+R\), com a
+mesma definição do painel; \path{share_{g}_hist_mkt}, sobre o total em mercado;
+\path{coverage_NFR_over_market}; e as versões predeterminadas
+\path{share_*_hist_lag1}, \path{share_*_hist_mkt_lag1}, \path{stock_*_hist_pib_lag1}
+e \path{gross_{g}_over_lag_stock_hist}. O painel resultante,
+\path{data/clean/ftpl_monthly_panel_with_stock_history.csv}, com 564 linhas e 382
+colunas, passa a ser o mais completo do projeto.
+
+No início da amostra, \(N+F+R\) cobre só parte da dívida em mercado: 75\% em
+2000-02, 70\% no mínimo de setembro de 2002, 82\% em janeiro de 2005 e 99\% hoje. O
+restante é sobretudo NTN-C, títulos cambiais e LFT-A/B. A NTN-B é zero antes de
+janeiro de 2002 e a NTN-F antes de fevereiro de 2005; essas participações são
+estruturalmente nulas, não ausentes. A especificação base usa as participações
+sobre \(N+F+R\); as participações sobre o total em mercado e a amostra a partir de
+2005 ficam como robustez.
+
+\subsection{Segunda entrega do coautor}
+
+A pasta \path{DadosJoao/data/} foi auditada em 22/11/2026. Os pontos relevantes são:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{stock_by_group_bcb_sgs.csv} não deve ser usado. Os valores brutos do
+    SGS são idênticos aos nossos, mas a NTN-F foi inferida das participações
+    percentuais 4177 e 4178, o que gera NTN-F negativa em 57 meses de 2000 a 2004,
+    erro no estoque \(N\) em todos os meses (até 11,6\%, ou R\$ 7,4 bi) e erro de até
+    1,7 ponto percentual na participação de \(N\);
+    \item \path{fatores_curva_juros.xlsx} contém apenas os parâmetros \(\beta_1\) a
+    \(\beta_4\) de Svensson, mensais de fim de mês, de 2010-01 a 2025-12, sem
+    \(\lambda_1\) e \(\lambda_2\). Sem eles não é possível reconstruir os vértices
+    nem a inflação implícita, e o arquivo não atende aos requisitos da Etapa B. Foram
+    pedidos ao coautor os yields diários da curva zero-cupom da ANBIMA (prefixada,
+    IPCA e inflação implícita), do início de cada série, no mínimo desde
+    dezembro de 2009, até a data mais recente;
+    \item \path{CDS_Brasil.xlsx} traz CDS de 5 e 2 anos de 2008-01 a 2026-06, sem fonte
+    declarada e com meses de 2008 repetidos; fica apenas para robustez e não foi
+    integrado;
+    \item as planilhas brutas do Prisma de 2015 a 2023 cobrem parte do pedido
+    anterior; as expectativas de 2024 em diante só existem como exportação do painel
+    Qlik, ainda não preservada;
+    \item os demais arquivos repetem versões anteriores da nossa própria cadeia.
+\end{itemize}
 
 \section{Estado atual do projeto}
 
@@ -1198,7 +1284,9 @@ econométrica dos choques de emissão.
     \item spread soberano, juros reais de 5 e 10 anos e juro nominal de 1 ano como
     variáveis de resultado;
     \item correção da leitura das séries do SGS e da série do IBC-Br, com reexecução
-    completa do pipeline.
+    completa do pipeline;
+    \item estoque e participações por classe estendidos para 2000-02 a 2026-09 com
+    séries do SGS, emendadas e validadas contra o eDPF.
 \end{itemize}
 
 \subsection{Ainda pendente}
@@ -1210,12 +1298,14 @@ econométrica dos choques de emissão.
     para janelas de validade mais precisas;
     \item escolher a medida baseline de \(\Delta\mathcal{F}_t^P\) entre as séries Focus
     e Prisma e datar a divulgação da surpresa do primário;
-    \item obter as planilhas originais do Prisma usadas na base do coautor;
+    \item obter a exportação do painel Qlik com as expectativas do Prisma de 2024 em
+    diante usada na base do coautor;
     \item estimar equações de previsão de emissão por \(N\), \(F\) e \(R\);
     \item obter resíduos de emissão e choques survey-purged;
     \item obter dados autenticados da ANBIMA ou preencher o template manual e
     validar os fatores de curva de juros, yields reais e inflação implícita;
-    \item obter a curva completa para inflação implícita em vários prazos;
+    \item obter a curva completa para inflação implícita em vários prazos (pedidos ao
+    coautor os yields diários da ANBIMA);
     \item implementar projeções locais;
     \item testar formalmente as restrições \(N > R\) e \(N > F > R\);
     \item construir validação narrativa e exercícios de robustez.

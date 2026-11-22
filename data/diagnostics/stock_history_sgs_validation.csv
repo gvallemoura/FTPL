@@ -1,0 +1,16 @@
+check,n,value,worst_month
+N: max |SGS/eDPF - 1| (common period),104.0,4.6272846443429216e-07,2022-04
+N: mean SGS/eDPF - 1,104.0,4.698482333860447e-08,
+N: corr of monthly changes SGS vs eDPF (lag 0),103.0,0.9999999999832584,
+F: max |SGS/eDPF - 1| (common period),104.0,1.1875338261635449e-06,2023-10
+F: mean SGS/eDPF - 1,104.0,2.336447973673332e-07,
+F: corr of monthly changes SGS vs eDPF (lag 0),103.0,0.9999999999255338,
+R: max |SGS/eDPF - 1| (common period),104.0,3.688414827118791e-05,2017-10
+R: mean SGS/eDPF - 1,104.0,2.31383519248776e-05,
+R: corr of monthly changes SGS vs eDPF (lag 0),103.0,0.9999999995575709,
+share_N: max |SGS - eDPF| (pp),104.0,0.0004000226340838964,
+share_F: max |SGS - eDPF| (pp),104.0,0.00037363421667158114,
+share_R: max |SGS - eDPF| (pp),104.0,0.0007623800523604007,
+"implied NTN-F < -1.5 R$ mi (rounding tolerance), months",320.0,0.0,
+first month with NTN-F > R$ 1 bn,,,2005-02
+"splice status (max level gap <= 0.5%, no negative NTN-F)",104.0,,PASS

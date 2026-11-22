@@ -1,0 +1,46 @@
+{
+  "predetermined_controls_main": [
+    "share_N_hist_lag1",
+    "share_F_hist_lag1",
+    "share_R_hist_lag1",
+    "stock_N_hist_pib_lag1",
+    "stock_F_hist_pib_lag1",
+    "stock_R_hist_pib_lag1",
+    "stock_total_NFR_hist_pib_lag1"
+  ],
+  "predetermined_controls_robustness": [
+    "share_N_hist_mkt_lag1",
+    "share_F_hist_mkt_lag1",
+    "share_R_hist_mkt_lag1",
+    "coverage_NFR_over_market_lag1"
+  ],
+  "dependent_variable_candidates": [
+    "gross_N_over_lag_stock_hist",
+    "gross_F_over_lag_stock_hist",
+    "gross_R_over_lag_stock_hist"
+  ],
+  "contemporaneous_not_controls": [
+    "share_N_hist",
+    "share_F_hist",
+    "share_R_hist",
+    "share_N_hist_mkt",
+    "share_F_hist_mkt",
+    "share_R_hist_mkt",
+    "stock_N_hist_brl",
+    "stock_F_hist_brl",
+    "stock_R_hist_brl",
+    "stock_total_NFR_hist_brl"
+  ],
+  "splice_segments": [
+    "SGS: 2000-02 to 2017-08 (211 months)",
+    "eDPF: 2017-09 to 2026-04 (104 months)",
+    "SGS: 2026-05 to 2026-09 (5 months)"
+  ],
+  "notes": [
+    "eDPF (Tesouro estoquedpf.csv, Mercado) where available; BCB SGS 'posicao em carteira' elsewhere.",
+    "N = SGS 10651 - 10650 (LTN + NTN-F); NTN-F has no own SGS series.",
+    "Before ~2005 N+F+R covers only 70-82% of the market stock (NTN-C, FX-linked, LFT-A/B); use the _mkt shares and a 2005+ sample as robustness.",
+    "NTN-B is zero before 2002-01 and NTN-F before 2005-02: share_R and share_N(NTN-F part) are structurally zero there, not missing.",
+    "Do not use DadosJoao stock_by_group_bcb_sgs.csv: its NTN-F is inferred from the 4177/4178 percentages and is negative in 2000-2004."
+  ]
+}

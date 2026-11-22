@@ -17,8 +17,11 @@ notebook de dados (ver "SGS decimal-parsing fix" abaixo) e reexecutada toda a
 cadeia; (ii) integrada a base de notícia fiscal Prisma/Focus construída pelo
 coautor João (`build_prisma_fiscal_news.py`); (iii) adicionadas variáveis de
 resultado de valuation — spread soberano, juros reais e nominais —
-a partir do pacote Zenodo de Carvalho Filho (2026) (`build_valuation_outcomes.py`).
-As curvas ANBIMA completas continuam pendentes.
+a partir do pacote Zenodo de Carvalho Filho (2026) (`build_valuation_outcomes.py`);
+(iv) auditada a segunda entrega do João (`DadosJoao/data/`) e estendidos o estoque
+e as participações por classe para 2000-02–2026-09 com séries do SGS, emendadas ao
+eDPF (`build_stock_history_sgs.py`). Os fatores de curva entregues (β de Svensson
+sem λ) não substituem a curva ANBIMA; as curvas completas continuam pendentes.
 
 ## Research Objective
 
@@ -238,7 +241,7 @@ Adds valuation outcome variables from the frozen monthly files of the Carvalho
 Filho (2026) replication package (doi:10.5281/zenodo.24206681, CC-BY-4.0; cite
 when used). The package is git-ignored and must be downloaded from Zenodo into
 `data/raw/zenodo_24206681_fiscal_svar/`. Writes
-`data/clean/ftpl_monthly_panel_with_valuation_outcomes.csv` (the latest panel).
+`data/clean/ftpl_monthly_panel_with_valuation_outcomes.csv`.
 
 - Main outcomes: `embi_spread_bp` (EMBI+ Brazil to 2024-07, then EMBI Global
   Diversified + 2.5 bp splice gap), `real_yield_5y_pct` and `real_yield_10y_pct`
@@ -249,6 +252,76 @@ when used). The package is git-ignored and must be downloaded from Zenodo into
 - Each also as `*_avg_lag1` (predetermined). All are monthly means of daily data,
   so no `_eom_lag1` version exists; no break-even is built because there is no
   nominal and real yield at the same maturity.
+
+### `build_stock_history_sgs.py`
+
+Extends the stock and shares by class back to 2000 (the eDPF-based columns
+`stock_*_brl`, `share_*` start only in 2017-09). Reads the latest panel
+(`ftpl_monthly_panel_with_valuation_outcomes.csv`) and writes
+`data/clean/ftpl_monthly_panel_with_stock_history.csv` (the latest panel, +32
+columns; existing columns are untouched). Flag `--offline` reuses the newest
+saved pulls.
+
+- Source: BCB SGS, federal securities held by the market ("posição em carteira",
+  excluding the BCB portfolio), R$ million, monthly from 2000-02. Raw pulls are
+  saved as `data/raw/bcb/sgs_<code>_<UTC timestamp>.csv` and never overwritten:
+  10634 LFT (F), 10642 NTN-B (R), 10649 LTN, 10651 total pre-fixed, 10650 small
+  pre-fixed residual item (2002-02 to 2005-09, ≤ R$ 0.12 bn, excluded), 10647
+  NTN-C (coverage only), 4154 total Treasury securities in the market
+  (denominator).
+- N = 10651 − 10650 (LTN + NTN-F). NTN-F has no own SGS series; the implied
+  value is never negative beyond ±1 rounding and becomes material in 2005-02.
+- Splice: eDPF wherever it exists (2017-09 to 2026-04), SGS elsewhere (2000-02
+  to 2017-08 and 2026-05 to 2026-09); `stock_hist_source` records the origin.
+  Over the 104 common months SGS and eDPF agree to within 0.004% in levels
+  (N and F ≈ 0), shares within 0.001 pp, and monthly changes correlate 1.0 at
+  lag 0 (SGS dated day 01 = end-of-month stock). The script stops if the level
+  gap exceeds 0.5% or NTN-F turns negative; on eDPF months the new shares
+  reproduce `share_*` exactly.
+- New variables: `stock_{N,F,R,total_NFR}_hist_brl`; `share_{g}_hist` (over
+  N+F+R, same definition as `share_{g}`); `share_{g}_hist_mkt` (over the total
+  in the market, SGS 4154); `coverage_NFR_over_market`;
+  `stock_market_total_sgs_brl`, `stock_ntnc_sgs_brl`; predetermined
+  `share_*_hist_lag1`, `share_*_hist_mkt_lag1`, `stock_*_hist_brl_lag1`,
+  `stock_*_hist_pib_lag1`, `coverage_NFR_over_market_lag1`; and
+  `gross_{g}_over_lag_stock_hist` (same formulas as the eDPF columns).
+- Coverage caveat: N+F+R is only 75% of the market stock in 2000-02, 70% at the
+  2002-09 trough, 82% in 2005-01 and 99% today (the rest is NTN-C, FX-linked
+  bonds and LFT-A/B). NTN-B is zero before 2002-01 and NTN-F before 2005-02, so
+  those shares are structurally zero, not missing. Baseline: shares over N+F+R
+  (consistent with the panel); robustness: `_mkt` shares and a 2005+ sample.
+- Outputs: `data/intermediate/stock_history/stock_history_sgs_monthly.csv`
+  (includes LTN and implied NTN-F separately); diagnostics
+  `stock_history_sgs_audit.csv` (file, sha256, URL per SGS pull),
+  `stock_history_sgs_validation.csv`, `stock_history_sgs_diagnostics.csv`,
+  `stock_history_sgs_lists.json`; figure `data/figures/stock_history_sgs.png`.
+- João's `DadosJoao/data/clean/stock_by_group_bcb_sgs.csv` must not be used. Its
+  raw SGS values are identical to ours, but it infers NTN-F from the percentage
+  series 4177/4178 (`% pre × LFT / % Selic − LTN`), which gives negative NTN-F in
+  57 months of 2000–2004, N errors in every month (up to 11.6%, R$ 7.4 bn) and
+  share errors up to 1.7 pp.
+
+#### Other files in `DadosJoao/data/` (audited 22/11/2026)
+
+- `fatores_curva_juros.xlsx`: monthly end-of-month Svensson β1–β4, nominal and
+  real, 2010-01 to 2025-12, with no λ1/λ2. Without the λ the vertices and
+  break-even cannot be rebuilt; the real-curve βs take extreme offsetting values.
+  It does not meet `ANBIMA_data_requirements.md`. João was asked for the daily
+  ANBIMA zero-coupon yields (PRE, IPCA, implied inflation) from the start of
+  each series (at least 2009-12) to the latest date, optionally with the daily
+  Svensson parameters for cross-checking.
+- `CDS_Brasil.xlsx`: 5y and 2y CDS, 2008-01 to 2026-06, source not stated,
+  apparently point values (corr. with Zenodo `cds5y` 0.98 in levels, 0.72 in
+  changes) with 2008-05 to 2008-08 forward-filled. Robustness only; not
+  integrated.
+- `raw/2026-06-24/prisma/`: raw Prisma spreadsheets for 2015–2023 (partly
+  covers the request for João's raw files; 2024+ still only exists as a Qlik
+  export that was not preserved).
+- Net issuance by indexer (BCB fiscal statistics, 2017–2026) and accrued interest
+  by class: possible robustness, not integrated.
+- Everything else (`clean/ftpl_monthly_panel.csv`, `main_dataset.csv`,
+  `issuance_dataset.csv`, `stock_*`, auctions, RMD annexes) duplicates older
+  versions of our own pipeline.
 
 ### SGS decimal-parsing fix (22/11/2026)
 
@@ -309,7 +382,8 @@ earlier or auxiliary R script and is not part of the active Python pipeline.
 │   ├── build_anbima_yield_curve_controls.py
 │   ├── build_fiscal_expectations_controls.py
 │   ├── build_prisma_fiscal_news.py
-│   └── build_valuation_outcomes.py
+│   ├── build_valuation_outcomes.py
+│   └── build_stock_history_sgs.py
 ├── notebooks/
 │   ├── ftpl_build_data_notebook.ipynb
 │   ├── build_structural_controls.ipynb
@@ -417,11 +491,14 @@ The principal current panels are:
   missing because no ANBIMA curve observations were available;
 - `ftpl_monthly_panel_with_fiscal_expectations.csv`: 564 × 292 (Focus);
 - `ftpl_monthly_panel_with_fiscal_news.csv`: 564 × 332 (Prisma/Focus news);
-- `ftpl_monthly_panel_with_valuation_outcomes.csv`: 564 × 350, the latest and
-  most complete panel (adds sovereign spread and yields).
+- `ftpl_monthly_panel_with_valuation_outcomes.csv`: 564 × 350 (adds sovereign
+  spread and yields);
+- `ftpl_monthly_panel_with_stock_history.csv`: 564 × 382, the latest and most
+  complete panel (adds stock and shares by class from 2000-02, `*_hist`).
 
-Issuance and auction files still end in 2026-06 and stocks in 2026-04 because
-the raw Treasury files were not re-downloaded in the 22/11/2026 rerun.
+Issuance and auction files still end in 2026-06 and eDPF stocks in 2026-04 because
+the raw Treasury files were not re-downloaded in the 22/11/2026 rerun; the
+`*_hist` stock columns extend to 2026-09 with SGS.
 
 ### `data/intermediate/anbima/`
 
@@ -470,6 +547,8 @@ Completed or substantially implemented:
   revision proxies \(\Delta\mathcal{F}_t^P\);
 - valuation outcomes: sovereign spread (EMBI spliced, CDS), 5y/10y real yields
   and 1y nominal yields (`build_valuation_outcomes.py`);
+- stock and shares by class extended to 2000-02–2026-09 with BCB SGS, spliced
+  with eDPF and validated over 2017-09–2026-04 (`build_stock_history_sgs.py`);
 - SGS decimal-parsing and IBC-Br series fixes, with full pipeline rerun.
 
 Not yet implemented or not yet populated:
@@ -508,7 +587,7 @@ Recommended order of work:
   stable notebook logic should gradually be moved into scripts or a package-style
   pipeline with explicit stage dependencies.
 - The current `scheduled_maturities_proxy.csv` is explicitly a proxy based on market stock values and maturity timing. The PDF recommends a richer predetermined financial redemption measure when the required security-level data are available.
-- The final combined panel extends back to 1979 because macro series are longer than issuance data. The usable empirical sample for issuance-based tests starts in 2000, and stock/maturity-share controls are only available from 2017 in the current cleaned files.
+- The final combined panel extends back to 1979 because macro series are longer than issuance data. The usable empirical sample for issuance-based tests starts in 2000, Stock and share controls now cover 2000-02 onward through `build_stock_history_sgs.py` (`*_hist` columns; the original eDPF columns still start in 2017-09), while the maturity proxy remains available only from 2021.
 - The PAF targets cover 2003--2026, while the liquidity-reserve series covers
   2015-01--2026-05. Their shorter coverage is expected and should not be filled by
   interpolation outside the official source period.
