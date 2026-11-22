@@ -258,8 +258,8 @@ when used). The package is git-ignored and must be downloaded from Zenodo into
 Extends the stock and shares by class back to 2000 (the eDPF-based columns
 `stock_*_brl`, `share_*` start only in 2017-09). Reads the latest panel
 (`ftpl_monthly_panel_with_valuation_outcomes.csv`) and writes
-`data/clean/ftpl_monthly_panel_with_stock_history.csv` (the latest panel, +32
-columns; existing columns are untouched). Flag `--offline` reuses the newest
+`data/clean/ftpl_monthly_panel_with_stock_history.csv` (the latest panel, +50
+columns, 32 baseline and 18 broad-real robustness; existing columns are untouched). Flag `--offline` reuses the newest
 saved pulls.
 
 - Source: BCB SGS, federal securities held by the market ("posição em carteira",
@@ -295,6 +295,16 @@ saved pulls.
   `stock_history_sgs_audit.csv` (file, sha256, URL per SGS pull),
   `stock_history_sgs_validation.csv`, `stock_history_sgs_diagnostics.csv`,
   `stock_history_sgs_lists.json`; figure `data/figures/stock_history_sgs.png`.
+- Robustness only - broad real block `Ramp` = NTN-B + NTN-C (IGP-M linked):
+  NTN-C market sales from the auction file (notebook filter, checked to reproduce
+  `gross_R_brl`; R$ 26.7 bn in 2001–2006) plus SGS 10647 stock. 18 extra columns
+  (`gross_ntnc_brl`, `gross_Ramp_brl`, `gross_Ramp_brl_over_pib_lag1`,
+  `stock_Ramp_hist_brl`, `share_{N,F}_hist_ramp`, `share_Ramp_hist`,
+  `share_Ramp_hist_mkt`, their `_lag1`, `stock_Ramp_hist_pib_lag1`,
+  `gross_Ramp_over_lag_stock_hist`, ...), listed under
+  `robustness_broad_real_block_Ramp` in the lists JSON. It gives R-block issuance
+  from 2001 instead of 2005; the baseline R stays NTN-B only. The panel now has
+  564 × 399 columns.
 - João's `DadosJoao/data/clean/stock_by_group_bcb_sgs.csv` must not be used. Its
   raw SGS values are identical to ours, but it infers NTN-F from the percentage
   series 4177/4178 (`% pre × LFT / % Selic − LTN`), which gives negative NTN-F in
@@ -493,7 +503,7 @@ The principal current panels are:
 - `ftpl_monthly_panel_with_fiscal_news.csv`: 564 × 332 (Prisma/Focus news);
 - `ftpl_monthly_panel_with_valuation_outcomes.csv`: 564 × 350 (adds sovereign
   spread and yields);
-- `ftpl_monthly_panel_with_stock_history.csv`: 564 × 382, the latest and most
+- `ftpl_monthly_panel_with_stock_history.csv`: 564 × 399, the latest and most
   complete panel (adds stock and shares by class from 2000-02, `*_hist`).
 
 Issuance and auction files still end in 2026-06 and eDPF stocks in 2026-04 because

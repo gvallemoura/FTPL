@@ -14,3 +14,5 @@ share_R: max |SGS - eDPF| (pp),104.0,0.0007623800523604007,
 "implied NTN-F < -1.5 R$ mi (rounding tolerance), months",320.0,0.0,
 first month with NTN-F > R$ 1 bn,,,2005-02
 "splice status (max level gap <= 0.5%, no negative NTN-F)",104.0,,PASS
+auction filter reproduces gross_R_brl: max |gap| (R$),317.0,3.814697265625e-06,
+"NTN-C market sales by year (R$ bn): 2001: 6.71, 2002: 6.66, 2003: 5.38, 2004: 5.36, 2005: 1.14, 2006: 1.48",57.0,26.73788541576,

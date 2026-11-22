@@ -1210,14 +1210,15 @@ do eDPF, as novas participações reproduzem exatamente as colunas \path{share_*
 
 \subsection{Variáveis e cobertura}
 
-São 32 colunas novas, sem alterar nenhuma coluna existente:
+Para a especificação base, são 32 colunas novas, sem alterar nenhuma coluna existente:
 \path{stock_{N,F,R,total_NFR}_hist_brl}; \path{share_{g}_hist}, sobre \(N+F+R\), com a
 mesma definição do painel; \path{share_{g}_hist_mkt}, sobre o total em mercado;
 \path{coverage_NFR_over_market}; e as versões predeterminadas
 \path{share_*_hist_lag1}, \path{share_*_hist_mkt_lag1}, \path{stock_*_hist_pib_lag1}
 e \path{gross_{g}_over_lag_stock_hist}. O painel resultante,
-\path{data/clean/ftpl_monthly_panel_with_stock_history.csv}, com 564 linhas e 382
-colunas, passa a ser o mais completo do projeto.
+\path{data/clean/ftpl_monthly_panel_with_stock_history.csv}, com 564 linhas e 399
+colunas (incluindo as 18 colunas do bloco real ampliado descrito abaixo), passa a ser
+o mais completo do projeto.
 
 No início da amostra, \(N+F+R\) cobre só parte da dívida em mercado: 75\% em
 2000-02, 70\% no mínimo de setembro de 2002, 82\% em janeiro de 2005 e 99\% hoje. O
@@ -1226,6 +1227,60 @@ janeiro de 2002 e a NTN-F antes de fevereiro de 2005; essas participações são
 estruturalmente nulas, não ausentes. A especificação base usa as participações
 sobre \(N+F+R\); as participações sobre o total em mercado e a amostra a partir de
 2005 ficam como robustez.
+
+\subsection{Bloco real ampliado (robustez)}
+
+A NTN-C é indexada ao IGP-M e, portanto, também é dívida real protegida da
+inflação. Antes de 2006 ela dominava o bloco real: era 100\% do estoque real em
+2001, 83\% em 2003 e 75\% em janeiro de 2005, contra 4\% hoje. Ela foi emitida em
+leilões de 2001 a 2006, enquanto a NTN-B só passou a ser emitida com regularidade
+em 2004 e em volume relevante em 2005. O mesmo script constrói, exclusivamente para
+análise de robustez, o bloco \(R^{amp}\) = NTN-B + NTN-C. O bloco \(R\) da
+especificação base continua sendo apenas a NTN-B.
+
+A emissão bruta de NTN-C vem de \path{data/clean/auction_operations_clean.csv}, com
+o mesmo filtro do notebook para a emissão base: vendas em mercado (VENDA e EXTRA
+VENDA), valor aceito positivo e mês de liquidação. O script verifica que esse filtro
+reproduz \path{gross_R_brl} (diferença máxima de R\$ 0,000004) antes de somar a
+NTN-C. As vendas de NTN-C foram de R\$ 6,7 bi em 2001, 6,7 bi em 2002, 5,4 bi em 2003,
+5,4 bi em 2004, 1,1 bi em 2005 e 1,5 bi em 2006. O estoque de NTN-C é a série 10647 do
+SGS em todos os meses.
+
+\begin{longtable}{p{0.10\textwidth}p{0.20\textwidth}p{0.20\textwidth}p{0.20\textwidth}p{0.18\textwidth}}
+\toprule
+\textbf{Ano} & \textbf{Meses com emissão \(R\)} & \textbf{Meses com emissão \(R^{amp}\)} &
+\textbf{Emissão \(R^{amp}\) (R\$ bi)} & \textbf{Participação \(R^{amp}\)} \\
+\midrule
+\endhead
+2000 & 0 & 0 & 0,0 & 1,4\% \\
+2001 & 0 & 11 & 6,7 & 5,0\% \\
+2002 & 0 & 9 & 6,7 & 9,9\% \\
+2003 & 4 & 11 & 8,0 & 12,1\% \\
+2004 & 11 & 12 & 9,7 & 14,0\% \\
+2005 & 12 & 12 & 24,6 & 13,5\% \\
+2006 & 12 & 12 & 51,2 & 21,4\% \\
+\bottomrule
+\end{longtable}
+
+As 18 colunas adicionais são \path{gross_ntnc_brl}, \path{gross_Ramp_brl},
+\path{gross_Ramp_brl_over_pib_lag1} (e \path{_pct}), \path{stock_ntnc_hist_brl},
+\path{stock_Ramp_hist_brl}, \path{stock_total_NFRamp_hist_brl}; as participações
+\path{share_N_hist_ramp}, \path{share_F_hist_ramp} e \path{share_Ramp_hist}, sobre
+\(N+F+R^{amp}\), e \path{share_Ramp_hist_mkt}, sobre o total em mercado, com suas
+versões \path{_lag1}; \path{stock_Ramp_hist_brl_lag1}, \path{stock_Ramp_hist_pib_lag1}
+e \path{gross_Ramp_over_lag_stock_hist}. A lista
+\path{robustness_broad_real_block_Ramp} em \path{stock_history_sgs_lists.json}
+separa essas variáveis das da especificação base.
+
+O uso previsto é um exercício de robustez com amostra longa, a partir de 2001, em
+que o choque \(\varepsilon_t^{R^{amp}}\) substitui \(\varepsilon_t^R\) e as participações
+ampliadas substituem as participações base. Duas ressalvas acompanham o exercício: a
+NTN-C protege contra o IGP-M, não contra o IPCA; e, a partir de 2006, a diferença em
+relação ao bloco base é pequena (de 1 a 6 pontos percentuais na participação, em
+queda). Além disso, as metas do PAF para ``índices de preços'' incluem a NTN-C e se
+referem à DPF total, enquanto \path{paf_gap_R_lag1} usa a participação apenas da
+NTN-B sobre \(N+F+R\); essa diferença de definição fica registrada, mas não foi
+alterada.
 
 \subsection{Segunda entrega do coautor}
 
@@ -1286,7 +1341,9 @@ econométrica dos choques de emissão.
     \item correção da leitura das séries do SGS e da série do IBC-Br, com reexecução
     completa do pipeline;
     \item estoque e participações por classe estendidos para 2000-02 a 2026-09 com
-    séries do SGS, emendadas e validadas contra o eDPF.
+    séries do SGS, emendadas e validadas contra o eDPF;
+    \item bloco real ampliado (NTN-B + NTN-C), com emissão, estoque e participações,
+    para análise de robustez com amostra a partir de 2001.
 \end{itemize}
 
 \subsection{Ainda pendente}

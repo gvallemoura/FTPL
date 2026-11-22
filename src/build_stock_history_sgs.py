@@ -39,6 +39,20 @@ Outputs (new columns only; existing columns are never modified):
 - predetermined versions: ``*_lag1``, ``stock_{g}_hist_pib_lag1`` and
   ``gross_{g}_over_lag_stock_hist`` (same formulas as the eDPF columns).
 
+Robustness only - broad real block ``Ramp`` = NTN-B + NTN-C (IGP-M linked).
+NTN-C is also inflation-protected real debt; it dominated the real block before
+2006 and was auctioned in 2001-2006. Gross NTN-C issuance comes from
+``data/clean/auction_operations_clean.csv`` with exactly the notebook's baseline
+filter (market sales, VENDA/EXTRA VENDA, accepted amount > 0, settlement month);
+the same filter reproduces ``gross_R_brl`` and the script checks it. The NTN-C
+stock is SGS 10647 in every month. Columns: ``gross_ntnc_brl``,
+``gross_Ramp_brl``, ``gross_Ramp_brl_over_pib_lag1(_pct)``,
+``stock_ntnc_hist_brl``, ``stock_Ramp_hist_brl``, ``stock_total_NFRamp_hist_brl``,
+``share_{N,F}_hist_ramp`` and ``share_Ramp_hist`` (over N+F+Ramp),
+``share_Ramp_hist_mkt``, their ``_lag1``, ``stock_Ramp_hist_brl_lag1``,
+``stock_Ramp_hist_pib_lag1`` and ``gross_Ramp_over_lag_stock_hist``. The
+baseline R block stays NTN-B only.
+
 Run from the project root:  python3 src/build_stock_history_sgs.py [--offline]
 """
 
@@ -99,6 +113,8 @@ PANEL_CANDIDATES = [
     CLEAN_DIR / "ftpl_monthly_panel_with_yield_curve_controls.csv",
 ]
 OUTPUT_PANEL = CLEAN_DIR / "ftpl_monthly_panel_with_stock_history.csv"
+AUCTIONS_FILE = CLEAN_DIR / "auction_operations_clean.csv"
+SALE_OPERATIONS = {"VENDA", "EXTRA VENDA"}
 
 
 def rel(path: Path) -> str:
@@ -289,6 +305,41 @@ def main() -> None:
     for g in GROUPS:
         out[f"gross_{g}_over_lag_stock_hist"] = gross[f"gross_{g}_brl"] / out[f"stock_{g}_hist_brl_lag1"]
     out["coverage_NFR_over_market_lag1"] = out["coverage_NFR_over_market"].shift(1)
+    # --- broad real block (robustness): R + NTN-C ---------------------------
+    auc = pd.read_csv(AUCTIONS_FILE, parse_dates=["settlement_date"])
+    auc["period"] = auc["settlement_date"].dt.to_period("M")
+    sale = auc[auc["operation"].isin(SALE_OPERATIONS) & auc["accepted_amount_brl"].fillna(0).gt(0)]
+    g_by = sale.groupby(["instrument", "period"])["accepted_amount_brl"].sum()
+    g_ntnb = g_by.get("NTN-B", pd.Series(dtype=float)).reindex(idx).fillna(0)
+    g_ntnc = g_by.get("NTN-C", pd.Series(dtype=float)).reindex(idx).fillna(0)
+    has_gross = gross["gross_R_brl"].notna()
+    repro = float((g_ntnb[has_gross] - gross.loc[has_gross, "gross_R_brl"]).abs().max())
+    if repro > 1.0:
+        raise RuntimeError(f"auction filter does not reproduce gross_R_brl (max gap R$ {repro:.2f})")
+    out["gross_ntnc_brl"] = g_ntnc.where(has_gross)
+    out["gross_Ramp_brl"] = gross["gross_R_brl"] + out["gross_ntnc_brl"]
+    out["gross_Ramp_brl_over_pib_lag1"] = out["gross_Ramp_brl"] / pib
+    out["gross_Ramp_brl_over_pib_lag1_pct"] = out["gross_Ramp_brl_over_pib_lag1"] * 100
+    out["stock_ntnc_hist_brl"] = out["stock_ntnc_sgs_brl"]
+    out["stock_Ramp_hist_brl"] = out["stock_R_hist_brl"] + out["stock_ntnc_hist_brl"]
+    out["stock_total_NFRamp_hist_brl"] = out["stock_total_NFR_hist_brl"] + out["stock_ntnc_hist_brl"]
+    for g, col in [("N", "stock_N_hist_brl"), ("F", "stock_F_hist_brl")]:
+        out[f"share_{g}_hist_ramp"] = out[col] / out["stock_total_NFRamp_hist_brl"]
+    out["share_Ramp_hist"] = out["stock_Ramp_hist_brl"] / out["stock_total_NFRamp_hist_brl"]
+    out["share_Ramp_hist_mkt"] = out["stock_Ramp_hist_brl"] / out["stock_market_total_sgs_brl"]
+    for c in ["share_N_hist_ramp", "share_F_hist_ramp", "share_Ramp_hist", "share_Ramp_hist_mkt"]:
+        out[f"{c}_lag1"] = out[c].shift(1)
+    out["stock_Ramp_hist_brl_lag1"] = out["stock_Ramp_hist_brl"].shift(1)
+    out["stock_Ramp_hist_pib_lag1"] = out["stock_Ramp_hist_brl_lag1"] / pib
+    out["gross_Ramp_over_lag_stock_hist"] = out["gross_Ramp_brl"] / out["stock_Ramp_hist_brl_lag1"]
+    ntnc_years = g_ntnc[g_ntnc > 0].groupby(g_ntnc[g_ntnc > 0].index.year).sum() / 1e9
+    checks.loc[len(checks)] = {"check": "auction filter reproduces gross_R_brl: max |gap| (R$)",
+                               "n": int(has_gross.sum()), "value": repro, "worst_month": None}
+    checks.loc[len(checks)] = {"check": "NTN-C market sales by year (R$ bn): "
+                               + ", ".join(f"{y}: {v:.2f}" for y, v in ntnc_years.items()),
+                               "n": int((g_ntnc > 0).sum()), "value": float(ntnc_years.sum()),
+                               "worst_month": None}
+    checks.to_csv(DIAGNOSTICS_DIR / "stock_history_sgs_validation.csv", index=False)
     out.index.name = "month"
 
     # consistency: spliced columns reproduce the panel's eDPF columns exactly
@@ -330,6 +381,13 @@ def main() -> None:
         "dependent_variable_candidates": [f"gross_{g}_over_lag_stock_hist" for g in GROUPS],
         "contemporaneous_not_controls": [f"share_{g}_hist" for g in GROUPS]
         + [f"share_{g}_hist_mkt" for g in GROUPS] + [f"stock_{g}_hist_brl" for g in GROUPS + ["total_NFR"]],
+        "robustness_broad_real_block_Ramp": {
+            "dependent_variable_candidates": ["gross_Ramp_brl_over_pib_lag1", "gross_Ramp_over_lag_stock_hist"],
+            "predetermined_controls": ["share_N_hist_ramp_lag1", "share_F_hist_ramp_lag1", "share_Ramp_hist_lag1",
+                                       "share_Ramp_hist_mkt_lag1", "stock_Ramp_hist_pib_lag1"],
+            "note": "Ramp = NTN-B + NTN-C (IGP-M). Robustness only; baseline R is NTN-B. Allows R-block "
+                    "issuance from 2001 (NTN-C auctions 2001-2006).",
+        },
         "splice_segments": spans.tolist(),
         "notes": [
             "eDPF (Tesouro estoquedpf.csv, Mercado) where available; BCB SGS 'posicao em carteira' elsewhere.",

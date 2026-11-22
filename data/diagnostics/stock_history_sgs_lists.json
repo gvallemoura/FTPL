@@ -31,6 +31,20 @@
     "stock_R_hist_brl",
     "stock_total_NFR_hist_brl"
   ],
+  "robustness_broad_real_block_Ramp": {
+    "dependent_variable_candidates": [
+      "gross_Ramp_brl_over_pib_lag1",
+      "gross_Ramp_over_lag_stock_hist"
+    ],
+    "predetermined_controls": [
+      "share_N_hist_ramp_lag1",
+      "share_F_hist_ramp_lag1",
+      "share_Ramp_hist_lag1",
+      "share_Ramp_hist_mkt_lag1",
+      "stock_Ramp_hist_pib_lag1"
+    ],
+    "note": "Ramp = NTN-B + NTN-C (IGP-M). Robustness only; baseline R is NTN-B. Allows R-block issuance from 2001 (NTN-C auctions 2001-2006)."
+  },
   "splice_segments": [
     "SGS: 2000-02 to 2017-08 (211 months)",
     "eDPF: 2017-09 to 2026-04 (104 months)",
