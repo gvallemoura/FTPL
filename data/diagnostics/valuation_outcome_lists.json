@@ -1,0 +1,32 @@
+{
+  "outcomes_main": [
+    "embi_spread_bp",
+    "real_yield_5y_pct",
+    "real_yield_10y_pct",
+    "ltn_1y_pct"
+  ],
+  "outcomes_robustness": [
+    "embi_plus_bp",
+    "embi_gd_bp",
+    "embi_gd_rel_bp",
+    "cds5y_bp",
+    "swap_di_pre_360d_pct"
+  ],
+  "predetermined_controls_avg_lag1": [
+    "embi_spread_bp_avg_lag1",
+    "embi_plus_bp_avg_lag1",
+    "embi_gd_bp_avg_lag1",
+    "embi_gd_rel_bp_avg_lag1",
+    "cds5y_bp_avg_lag1",
+    "real_yield_5y_pct_avg_lag1",
+    "real_yield_10y_pct_avg_lag1",
+    "ltn_1y_pct_avg_lag1",
+    "swap_di_pre_360d_pct_avg_lag1"
+  ],
+  "notes": [
+    "All series are monthly means of daily data; no end-of-month version available.",
+    "embi_spread_bp splices EMBI+ (to 2024-07) with EMBI GD (+ splice gap).",
+    "cds5y_bp quote convention (mid/bid/ask) not stated by the source; robustness only.",
+    "Source: Carvalho Filho (2026), doi:10.5281/zenodo.24206681, CC-BY-4.0 - cite when used."
+  ]
+}

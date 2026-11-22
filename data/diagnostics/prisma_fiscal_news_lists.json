@@ -1,0 +1,58 @@
+{
+  "purge_main_contemporaneous_do_not_use_as_controls": [
+    "prisma_primary_12m_rev_curr_pib",
+    "prisma_primary_36m_rev_curr_pib"
+  ],
+  "purge_surprise_release_dated": [
+    "prisma_primary_surp_pib_release"
+  ],
+  "predetermined_revisions": [
+    "prisma_primary_12m_rev_lag1_pib",
+    "prisma_primary_36m_rev_lag1_pib"
+  ],
+  "fixed_event_original_joao_contemporaneous": [
+    "prisma_rev_primario_brl_mi_h0",
+    "prisma_rev_primario_brl_mi_h1",
+    "prisma_rev_primario_brl_mi_h2",
+    "prisma_rev_primario_brl_mi_h3",
+    "prisma_rev_dbgg_gc_pp_h0",
+    "prisma_rev_dbgg_gc_pp_h1",
+    "prisma_rev_dbgg_gc_pp_h2",
+    "prisma_rev_dbgg_gc_pp_h3",
+    "prisma_rev_dbgg_gg_pp_h0",
+    "prisma_rev_dbgg_gg_pp_h1",
+    "prisma_rev_dbgg_gg_pp_h2",
+    "prisma_rev_dbgg_gg_pp_h3",
+    "focus_rev_primario_pp_h0",
+    "focus_rev_primario_pp_h1",
+    "focus_rev_primario_pp_h2",
+    "focus_rev_primario_pp_h3",
+    "focus_rev_dlsp_pp_h0",
+    "focus_rev_dlsp_pp_h1",
+    "focus_rev_dlsp_pp_h2",
+    "focus_rev_dlsp_pp_h3",
+    "focus_rev_dbgg_pp_h0",
+    "focus_rev_dbgg_pp_h1",
+    "focus_rev_dbgg_pp_h2",
+    "focus_rev_dbgg_pp_h3",
+    "focus_rev_nominal_pp_h0",
+    "focus_rev_nominal_pp_h1",
+    "focus_rev_nominal_pp_h2",
+    "focus_rev_nominal_pp_h3"
+  ],
+  "reference_only_not_news": [
+    "realizado_primario",
+    "prisma_fc_primario_m",
+    "prisma_surp_primario_brl_mi",
+    "prisma_primary_surp_brl_mi",
+    "prisma_primary_surp_pib",
+    "prisma_primary_12m_rev_curr_brl_mi",
+    "prisma_primary_36m_rev_curr_brl_mi"
+  ],
+  "notes": [
+    "Positive primary revision = higher expected surplus (good fiscal news); positive DLSP/DBGG revision = higher expected debt (bad news).",
+    "Prisma = Central Government; Focus = consolidated public sector.",
+    "prisma_rev_dbgg_gg_pp_* (2015-2020) and prisma_rev_dbgg_gc_pp_* (2021-) are different concepts; do not splice.",
+    "Focus revisions in João's file use baseCalculo=0 (30-day window medians), which smooths month-end revisions; prefer focus_*_rev_curr from build_fiscal_expectations_controls.py or rebuild with baseCalculo=1."
+  ]
+}

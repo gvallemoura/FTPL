@@ -17,9 +17,14 @@ data/.mplconfig/
 *.fdb_latexmk
 *.fls
 
-# Third-party replication package (Carvalho Filho 2026, doi:10.5281/zenodo.24206681);
-# re-download from Zenodo. Only its method is used, in src/build_fiscal_expectations_controls.py.
+# Third-party replication package (Carvalho Filho 2026, doi:10.5281/zenodo.24206681, CC-BY-4.0);
+# re-download from Zenodo into this folder. Its method is used in
+# src/build_fiscal_expectations_controls.py and its frozen monthly files (EMBI, CDS,
+# real/nominal yields) are read by src/build_valuation_outcomes.py.
 data/raw/zenodo_24206681_fiscal_svar/
+
+# Coauthor delivery (Nov 2026); preserved with SHA-256 in data/raw/prisma_fiscal_news_joao/
+DadosJoao/
 
 # Local snapshot taken before the Nov 2026 folder reorganisation
 backups/

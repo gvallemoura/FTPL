@@ -1,3 +1,3 @@
 date,curve_type,source,source_url,source_file,n_vertices_raw,n_vertices_used,interpolation_used,download_timestamp,notes
-,,API ANBIMA,https://developers.anbima.com.br/pt/apis/feed/precos-indices/titulos-publicos/,,0,0,False,2026-11-04T11:55:56+00:00,API not attempted because ANBIMA_API_BASE is not set.
-,,template manual,https://developers.anbima.com.br/pt/apis/feed/precos-indices/titulos-publicos/,data/raw/anbima/anbima_yield_curve_manual_template.csv,0,0,False,2026-11-04T11:55:56+00:00,Fallback manual template created; no yield values filled.
+,,API ANBIMA,https://developers.anbima.com.br/pt/apis/feed/precos-indices/titulos-publicos/,,0,0,False,2026-11-22T14:13:37+00:00,API not attempted because ANBIMA_API_BASE is not set.
+,,template manual,https://developers.anbima.com.br/pt/apis/feed/precos-indices/titulos-publicos/,data/raw/anbima/anbima_yield_curve_manual_template.csv,0,0,False,2026-11-22T14:13:38+00:00,Fallback manual template created; no yield values filled.

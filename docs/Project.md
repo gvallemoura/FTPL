@@ -12,6 +12,14 @@ Etapa B para curvas ANBIMA. Na última execução local registrada, em 30/06/202
 Etapa B estava preparada para receber dados, mas não continha observações de curva
 porque a API exigia credenciais que não estavam configuradas no ambiente.
 
+Atualização de 22/11/2026: (i) corrigido um bug de leitura numérica do SGS/BCB no
+notebook de dados (ver "SGS decimal-parsing fix" abaixo) e reexecutada toda a
+cadeia; (ii) integrada a base de notícia fiscal Prisma/Focus construída pelo
+coautor João (`build_prisma_fiscal_news.py`); (iii) adicionadas variáveis de
+resultado de valuation — spread soberano, juros reais e nominais —
+a partir do pacote Zenodo de Carvalho Filho (2026) (`build_valuation_outcomes.py`).
+As curvas ANBIMA completas continuam pendentes.
+
 ## Research Objective
 
 This project studies whether the denomination of Brazilian government debt changes the transmission of fiscal shocks to inflation and valuation variables. The theoretical mechanism comes from the Fiscal Theory of the Price Level: nominal fixed-rate debt can be revalued by inflation, inflation-indexed debt cannot be directly revalued through the price level, and floating-rate debt is intermediate because SELIC-linked payments rise when monetary policy responds to inflation.
@@ -189,6 +197,73 @@ mechanically) and `d_focus_covid_2020m03` … `d_focus_covid_2020m07`. Each has 
 `data/diagnostics/focus_fiscal_expectations_outliers.csv` but not dummied, since
 they may be genuine fiscal news.
 
+### `build_prisma_fiscal_news.py`
+
+Integrates the Prisma Fiscal / Focus fiscal-news dataset delivered by coauthor
+João in November 2026 (`DadosJoao/`, report `Relatorio_Series_Fiscais_v1.pdf`).
+The delivery is copied once, with SHA-256, to `data/raw/prisma_fiscal_news_joao/`
+and only that copy is read. Reads the fiscal-expectations panel and writes
+`data/clean/ftpl_monthly_panel_with_fiscal_news.csv`.
+
+Main variables (positive primary revision = higher expected surplus = good news):
+
+- `prisma_primary_{12m,36m}_rev_curr_pib`: Prisma median revision of the Central
+  Government primary balance during month t, fixed-event per target year combined
+  with the same horizon weights as the Focus script, % of lagged 12-month GDP.
+  Contemporaneous: survey purge only, never a forecasting control.
+- `prisma_primary_{12m,36m}_rev_lag1_pib`: predetermined versions.
+- `prisma_primary_surp_pib_release`: realized minus Prisma median for month t,
+  dated at the approximate release month t+1 (exact Treasury release dates still
+  to be checked).
+- João's original fixed-event columns (`prisma_rev_*`, `focus_rev_*`, R$ mi or
+  p.p.) are kept for traceability.
+
+Checks (`data/diagnostics/prisma_fiscal_news_validation.csv`): João's h0–h3
+revisions are reproduced to ~1e-11; the Prisma 12m revision correlates 0.95 with
+`focus_primary_12m_rev_curr`. Two issues in the delivery are handled in code:
+the realized series dates 2020-07 to 2021-12 on days 2–13, which made João's merge
+drop 18 surprises (recomputed: 129 months instead of 111); and GDP is taken
+from SGS 4380 directly (raw pull saved in `data/raw/bcb/`). Open points for João:
+the original Prisma spreadsheets and Focus pulls were not delivered (extraction
+not reproducible yet); `baseCalculo = 0` Focus medians are 30-day-window medians
+and smooth month-end revisions; Prisma gross debt switches from General
+Government (2015–2020) to Central Government (2021–), so it must not be spliced;
+his report proposes fiscal news as the LP shock "in place of" issuance
+innovations by class, which would change the identification design and needs a
+joint decision.
+
+### `build_valuation_outcomes.py`
+
+Adds valuation outcome variables from the frozen monthly files of the Carvalho
+Filho (2026) replication package (doi:10.5281/zenodo.24206681, CC-BY-4.0; cite
+when used). The package is git-ignored and must be downloaded from Zenodo into
+`data/raw/zenodo_24206681_fiscal_svar/`. Writes
+`data/clean/ftpl_monthly_panel_with_valuation_outcomes.csv` (the latest panel).
+
+- Main outcomes: `embi_spread_bp` (EMBI+ Brazil to 2024-07, then EMBI Global
+  Diversified + 2.5 bp splice gap), `real_yield_5y_pct` and `real_yield_10y_pct`
+  (Tesouro Direto NTN-B constant maturity), `ltn_1y_pct` (ANBIMA 1y LTN via
+  Ipeadata).
+- Robustness: `embi_plus_bp`, `embi_gd_bp`, `embi_gd_rel_bp`, `cds5y_bp`
+  (Investing.com, quote convention not stated), `swap_di_pre_360d_pct`.
+- Each also as `*_avg_lag1` (predetermined). All are monthly means of daily data,
+  so no `_eom_lag1` version exists; no break-even is built because there is no
+  nominal and real yield at the same maturity.
+
+### SGS decimal-parsing fix (22/11/2026)
+
+`fetch_bcb_sgs` in `ftpl_build_data_notebook.ipynb` removed every "." from SGS
+values, but the JSON API uses "." as the decimal separator ("638091.1"). Levels
+were inflated by a constant factor per series: GDP ×10 (so every `*_pib`
+variable was 10× too small), `selic_target_pa` ×100, `brl_usd` ×10⁴, IBC-Br
+×10⁵. Growth rates, logs and shares were unaffected. The notebook also
+downloaded SGS 24363 (IBC-Br without seasonal adjustment) into `ibc_br_sa`; it now
+uses 24364. After the fix the notebook was rerun locally (raw auction and stock
+files unchanged, `REFRESH = False`) followed by every stage script; issuance, stock
+and maturity columns in R$ are identical to before. Any estimate computed before
+this date with `*_pib`, SELIC, FX or IBC-Br levels must be redone. The pre-fix
+outputs are in `backups/sgs_decimal_fix_20261122/` (local, git-ignored).
+
 ### `ANBIMA_data_requirements.md`
 
 This is the consolidated data specification for Etapa B and the document to
@@ -231,7 +306,10 @@ earlier or auxiliary R script and is not part of the active Python pipeline.
 ├── src/
 │   ├── build_structural_controls.py
 │   ├── fill_manual_templates_official_sources.py
-│   └── build_anbima_yield_curve_controls.py
+│   ├── build_anbima_yield_curve_controls.py
+│   ├── build_fiscal_expectations_controls.py
+│   ├── build_prisma_fiscal_news.py
+│   └── build_valuation_outcomes.py
 ├── notebooks/
 │   ├── ftpl_build_data_notebook.ipynb
 │   ├── build_structural_controls.ipynb
@@ -289,11 +367,11 @@ Processed datasets generated by the notebook:
 - `auction_operations_clean.csv`: 19,604 rows, monthly coverage from 2000-01-01 to 2026-06-01. Cleaned auction operations with instrument, operation type, settlement date, maturity date, accepted amount, debt group, and market-sale indicator.
 - `gross_issuance_long.csv`: 891 rows, 2000-01-01 to 2026-06-01. Monthly gross issuance by debt group in long format.
 - `gross_issuance_wide.csv`: 318 rows, 2000-01-01 to 2026-06-01. Monthly gross issuance in wide format with `gross_N_brl`, `gross_F_brl`, `gross_R_brl`, and `gross_total_NFR_brl`.
-- `macro_monthly.csv`: 559 rows, 1979-12-01 to 2026-06-01. Monthly macro panel with SELIC target, IBC-Br, BRL/USD, IPCA index, inflation rates, activity growth, and exchange-rate changes.
+- `macro_monthly.csv`: 564 rows, 1979-12-01 to 2026-11-01. Monthly macro panel with SELIC target, IBC-Br, BRL/USD, IPCA index, inflation rates, activity growth, and exchange-rate changes.
 - `debt_stock_monthly.csv`: 104 rows, 2017-09-01 to 2026-04-01. Monthly market debt stock by debt class and portfolio shares.
 - `scheduled_maturities_proxy.csv`: 59 rows, 2017-10-01 to 2026-04-01. Proxy for scheduled maturities by class using stock observed at `t-1` for securities maturing in `t`.
-- `ftpl_monthly_panel.csv`: 559 rows, 1979-12-01 to 2026-06-01. Combined monthly panel with issuance, macro variables, stocks, shares, maturity proxies, and issuance-over-lagged-stock variables where available.
-- `ftpl_monthly_panel_with_pib_normalization.csv`: 559 rows, 1979-12-01 to 2026-06-01. Extended panel with nominal PIB, rolling 12-month PIB, lagged PIB normalization, and short econometric names such as `g_N_pib`, `g_F_pib`, `g_R_pib`, `m_N_pib`, `m_F_pib`, and `m_R_pib`.
+- `ftpl_monthly_panel.csv`: 564 rows, 1979-12-01 to 2026-11-01. Combined monthly panel with issuance, macro variables, stocks, shares, maturity proxies, and issuance-over-lagged-stock variables where available.
+- `ftpl_monthly_panel_with_pib_normalization.csv`: 564 rows, 1979-12-01 to 2026-11-01. Extended panel with nominal PIB, rolling 12-month PIB, lagged PIB normalization, and short econometric names such as `g_N_pib`, `g_F_pib`, `g_R_pib`, `m_N_pib`, `m_F_pib`, and `m_R_pib`.
 
 ### `data/figures/`
 
@@ -332,11 +410,18 @@ stages. The active manual inputs are:
 
 The principal current panels are:
 
-- `ftpl_monthly_panel_structural_controls.csv`: Etapa A panel with 559 monthly
-  observations and 192 columns;
-- `ftpl_monthly_panel_with_yield_curve_controls.csv`: derived panel with 559
+- `ftpl_monthly_panel_structural_controls.csv`: Etapa A panel with 564 monthly
+  observations (1979-12 to 2026-11) and 192 columns;
+- `ftpl_monthly_panel_with_yield_curve_controls.csv`: derived panel with 564
   observations and 264 columns. It contains the Etapa B curve columns, currently
-  missing because no ANBIMA curve observations were available.
+  missing because no ANBIMA curve observations were available;
+- `ftpl_monthly_panel_with_fiscal_expectations.csv`: 564 × 292 (Focus);
+- `ftpl_monthly_panel_with_fiscal_news.csv`: 564 × 332 (Prisma/Focus news);
+- `ftpl_monthly_panel_with_valuation_outcomes.csv`: 564 × 350, the latest and
+  most complete panel (adds sovereign spread and yields).
+
+Issuance and auction files still end in 2026-06 and stocks in 2026-04 because
+the raw Treasury files were not re-downloaded in the 22/11/2026 rerun.
 
 ### `data/intermediate/anbima/`
 
@@ -380,15 +465,24 @@ Completed or substantially implemented:
   yield-curve variables were all `NaN` because no source observations were loaded;
 - diagnostic and motivation figures for the available data stages.
 
+- Focus fiscal expectations (`build_fiscal_expectations_controls.py`) and Prisma
+  Fiscal news (`build_prisma_fiscal_news.py`), providing candidate fiscal-backing
+  revision proxies \(\Delta\mathcal{F}_t^P\);
+- valuation outcomes: sovereign spread (EMBI spliced, CDS), 5y/10y real yields
+  and 1y nominal yields (`build_valuation_outcomes.py`);
+- SGS decimal-parsing and IBC-Br series fixes, with full pipeline rerun.
+
 Not yet implemented or not yet populated:
 
-- Prisma Fiscal or Focus fiscal-expectations dataset;
-- finite-horizon fiscal-backing revision proxy \(\Delta\mathcal{F}_t^P\);
+- choice of the baseline \(\Delta\mathcal{F}_t^P\) (Prisma vs Focus, horizon) and
+  exact release dating of the Prisma surprise;
+- raw Prisma spreadsheets and Focus pulls behind João's dataset;
 - issuance forecasting equations and residual innovations \(u_t^j\);
 - survey-purged issuance shocks \(\varepsilon_t^j\);
 - authenticated ANBIMA history or audited manual curve data;
 - PCA factors with actual curve observations;
-- sovereign risk/CDS/EMBI, real-yield, nominal-yield, and breakeven outcomes;
+- full-curve breakeven outcomes (needs ANBIMA curves or the Tesouro Direto
+  fallback in `ANBIMA_data_requirements.md` §16);
 - local projection estimation and formal ranking tests;
 - narrative event database and pension-fund regulatory IV robustness.
 
@@ -398,7 +492,8 @@ Recommended order of work:
    with official files; rerun Etapa B and audit coverage/interpolation.
 2. Replace the maturity proxy with predetermined financial redemption values when
    security-level coupons, indexation, and quantities are available.
-3. Add fiscal-expectations data and construct \(\Delta\mathcal{F}_t^P\).
+3. Choose the baseline \(\Delta\mathcal{F}_t^P\) from the Focus and Prisma series
+   and fix the release timing of the Prisma surprise.
 4. Estimate the three issuance forecasting equations using the structural and
    yield-curve controls available at `t-1`.
 5. Purge `u_t^j` to obtain `epsilon_t^j`, documenting the information set

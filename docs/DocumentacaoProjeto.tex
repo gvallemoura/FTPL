@@ -1028,6 +1028,145 @@ template manual com arquivos oficiais. Depois disso, o script deve ser reexecuta
 e os diagnósticos de interpolação, cobertura, PCA e predeterminação devem ser
 revisados antes da estimação das equações de emissão.
 
+\section{Correção da leitura de séries do SGS e reexecução do pipeline}
+
+Em 22/11/2026 foi identificado um erro na função \path{fetch_bcb_sgs} do notebook
+\path{ftpl_build_data_notebook.ipynb}. A função removia todos os pontos dos valores
+retornados pelo SGS antes da conversão numérica, mas a API JSON do Banco Central usa
+o ponto como separador decimal (por exemplo, \path{"638091.1"}). Com isso, cada série
+ficava multiplicada por um fator constante igual a \(10^{d}\), onde \(d\) é o número
+de casas decimais da série:
+
+\begin{longtable}{p{0.35\textwidth}p{0.12\textwidth}p{0.43\textwidth}}
+\toprule
+\textbf{Série} & \textbf{Fator} & \textbf{Consequência} \\
+\midrule
+\endhead
+PIB mensal (SGS 4380) & \(\times 10\) & todas as variáveis \path{*_pib} (emissões,
+estoques, vencimentos, reserva de liquidez, operações extraordinárias) ficavam 10
+vezes menores \\
+Meta Selic (SGS 432) & \(\times 100\) & 4,50\% aparecia como 450 \\
+Câmbio BRL/USD (SGS 3698) & \(\times 10^4\) & nível incorreto \\
+IBC-Br & \(\times 10^5\) & nível incorreto \\
+\bottomrule
+\end{longtable}
+
+Como o fator é constante dentro de cada série, taxas de variação, logaritmos e
+participações não foram afetados. Níveis e combinações entre séries (por exemplo,
+estoque sobre PIB ou juro real menos Selic) estavam incorretos. A correção mantém a
+conversão do formato brasileiro apenas para valores com vírgula, que aparecem no
+fallback em CSV.
+
+Na mesma revisão constatou-se que a coluna \path{ibc_br_sa} era baixada da série SGS
+24363, que não tem ajuste sazonal. O código passou a usar a série 24364, com ajuste
+sazonal. A média da variação mensal por mês do ano, que chegava a +8,3\% em março na
+série antiga, ficou entre \(-0{,}3\%\) e \(+0{,}5\%\) na série corrigida.
+
+O notebook foi reexecutado localmente com \path{REFRESH = False}, preservando os
+arquivos brutos de leilões e de estoque, e em seguida todos os scripts da cadeia
+foram executados novamente na ordem: Etapa A, Etapa B, expectativas Focus, notícia
+fiscal Prisma e variáveis de valuation. As colunas de emissão, estoque e vencimento em
+reais ficaram idênticas às anteriores. O painel passou a ter 564 meses, de dezembro
+de 1979 a novembro de 2026, porque as séries macroeconômicas foram atualizadas. As
+saídas anteriores foram preservadas localmente em
+\path{backups/sgs_decimal_fix_20261122/}. Qualquer estimativa feita antes desta data
+com variáveis \path{*_pib}, Selic, câmbio ou IBC-Br em nível deve ser refeita.
+
+\section{Notícia fiscal: Prisma Fiscal e Focus}
+
+\subsection{Expectativas Focus}
+
+O script \path{src/build_fiscal_expectations_controls.py} constrói, a partir da API
+Olinda do Banco Central, as expectativas Focus de dívida líquida do setor público e
+de resultado primário, em \% do PIB, convertidas para horizontes fixos de 12 e 36
+meses. As versões \path{_eom_lag1}, \path{_avg_lag1} e \path{_rev_lag1} são
+predeterminadas; as revisões \path{_rev_curr} são notícia fiscal contemporânea e
+destinam-se apenas à purga.
+
+\subsection{Base Prisma do coautor}
+
+A base de notícia fiscal construída pelo coautor João a partir do Prisma Fiscal e do
+Focus foi integrada pelo script \path{src/build_prisma_fiscal_news.py}. A entrega é
+copiada uma única vez, com hash SHA-256, para
+\path{data/raw/prisma_fiscal_news_joao/}, e apenas essa cópia é lida. O painel
+resultante é \path{data/clean/ftpl_monthly_panel_with_fiscal_news.csv}.
+
+As principais variáveis são:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \path{prisma_primary_12m_rev_curr_pib} e
+    \path{prisma_primary_36m_rev_curr_pib}: revisão da mediana Prisma do resultado
+    primário do Governo Central no mês \(t\), calculada por ano-alvo e combinada com
+    os mesmos pesos de horizonte usados no Focus, em pontos percentuais do PIB
+    acumulado em 12 meses defasado. São candidatas a \(\Delta\mathcal{F}_t^P\) e não
+    devem entrar como controles da equação de emissão;
+    \item \path{prisma_primary_12m_rev_lag1_pib} e
+    \path{prisma_primary_36m_rev_lag1_pib}: versões predeterminadas;
+    \item \path{prisma_primary_surp_pib_release}: resultado primário realizado menos
+    a mediana Prisma para o mesmo mês, datada no mês aproximado de divulgação
+    (\(t+1\)).
+\end{itemize}
+
+O sinal é positivo quando aumenta o superávit esperado, isto é, quando a notícia
+fiscal é boa. As colunas originais do coautor são mantidas para rastreabilidade.
+
+\subsection{Validação e problemas tratados}
+
+As revisões do coautor para os horizontes \(h=0,\dots,3\) foram reproduzidas a partir
+da base longa com diferença máxima da ordem de \(10^{-11}\). A revisão Prisma de 12
+meses tem correlação de 0,95 com a revisão Focus de 12 meses. Dois problemas foram
+tratados no código:
+
+\begin{enumerate}[leftmargin=1.2cm]
+    \item na série realizada, os meses de julho de 2020 a dezembro de 2021 estavam
+    datados nos dias 2 a 13, o que fazia o merge por mês descartar 18 surpresas. A
+    surpresa foi recalculada e passou de 111 para 129 meses;
+    \item o PIB usado na normalização é baixado diretamente da série SGS 4380, com o
+    arquivo bruto preservado em \path{data/raw/bcb/}.
+\end{enumerate}
+
+Permanecem em aberto: a entrega das planilhas originais do Prisma e das consultas
+Focus usadas pelo coautor; o uso de \path{baseCalculo = 0} no Focus, cujas medianas
+em janela de 30 dias suavizam as revisões de fim de mês; a quebra de conceito da
+dívida bruta no Prisma (Governo Geral em 2015--2020 e Governo Central a partir de
+2021), que impede a emenda das duas séries; a datação exata da divulgação do
+resultado realizado; e a proposta do relatório do coautor de usar a notícia fiscal
+como choque das projeções locais em substituição às inovações de emissão por classe,
+o que alteraria a estratégia de identificação e precisa ser decidido em conjunto.
+
+\section{Variáveis de resultado de valuation}
+
+O script \path{src/build_valuation_outcomes.py} adiciona variáveis de resultado a
+partir dos arquivos mensais congelados do pacote de replicação de Carvalho Filho
+(2026), doi:10.5281/zenodo.24206681, sob licença CC-BY-4.0. O pacote não é versionado
+no Git e deve ser baixado do Zenodo para \path{data/raw/zenodo_24206681_fiscal_svar/}.
+O painel resultante,
+\path{data/clean/ftpl_monthly_panel_with_valuation_outcomes.csv}, com 564 linhas e
+350 colunas, é o painel mais completo do projeto.
+
+\begin{longtable}{p{0.30\textwidth}p{0.42\textwidth}p{0.18\textwidth}}
+\toprule
+\textbf{Variável} & \textbf{Origem} & \textbf{Cobertura} \\
+\midrule
+\endhead
+\path{embi_spread_bp} & EMBI+ Brasil (Ipeadata) até julho de 2024; depois EMBI
+Global Diversified Brasil mais o gap médio de 2,5 bp & 1994-04 a 2026-11 \\
+\path{real_yield_5y_pct}, \path{real_yield_10y_pct} & NTN-B do Tesouro Direto,
+interpolação diária a prazo constante & 2004-12 a 2026-11 \\
+\path{ltn_1y_pct} & taxa ANBIMA da LTN de 1 ano (Ipeadata) & 2000-04 a 2026-11 \\
+\path{cds5y_bp} & CDS soberano de 5 anos (Investing.com), robustez & 2009-01 a 2026-11 \\
+\path{embi_gd_rel_bp} & EMBI GD Brasil menos EMBI GD Global, robustez & 2007-10 a 2026-11 \\
+\path{swap_di_pre_360d_pct} & swap DI\(\times\)pré de 360 dias (B3), robustez &
+1999-09 a 2025-11 \\
+\bottomrule
+\end{longtable}
+
+Cada variável também entra na versão \path{_avg_lag1}, predeterminada. Todas as séries
+são médias mensais de dados diários; por isso não há versão \path{_eom_lag1}. Não se
+constrói inflação implícita, pois o pacote não contém juros nominais e reais no mesmo
+prazo. Na emenda do EMBI, o EMBI+ e o EMBI GD têm correlação de 0,994 nos níveis no
+período comum; o EMBI emendado e o CDS têm correlação de 0,92 nos níveis.
+
 \section{Estado atual do projeto}
 
 O projeto está na transição entre a construção de dados e a implementação
@@ -1054,7 +1193,12 @@ econométrica dos choques de emissão.
     \item estrutura da Etapa B para curvas de juros, fallback manual, agregação
     mensal predeterminada e PCA;
     \item painel derivado com as colunas de curva e auditoria da tentativa de acesso
-    à ANBIMA.
+    à ANBIMA;
+    \item expectativas fiscais Focus e notícia fiscal Prisma integradas ao painel;
+    \item spread soberano, juros reais de 5 e 10 anos e juro nominal de 1 ano como
+    variáveis de resultado;
+    \item correção da leitura das séries do SGS e da série do IBC-Br, com reexecução
+    completa do pipeline.
 \end{itemize}
 
 \subsection{Ainda pendente}
@@ -1064,13 +1208,14 @@ econométrica dos choques de emissão.
     mantidas como \path{unclear};
     \item complementar datas exatas de publicação dos PAFs, se forem necessárias
     para janelas de validade mais precisas;
-    \item incorporar expectativas fiscais Prisma ou Focus;
-    \item construir revisões de backing fiscal;
+    \item escolher a medida baseline de \(\Delta\mathcal{F}_t^P\) entre as séries Focus
+    e Prisma e datar a divulgação da surpresa do primário;
+    \item obter as planilhas originais do Prisma usadas na base do coautor;
     \item estimar equações de previsão de emissão por \(N\), \(F\) e \(R\);
     \item obter resíduos de emissão e choques survey-purged;
     \item obter dados autenticados da ANBIMA ou preencher o template manual e
     validar os fatores de curva de juros, yields reais e inflação implícita;
-    \item adicionar spreads soberanos e demais variáveis de valuation;
+    \item obter a curva completa para inflação implícita em vários prazos;
     \item implementar projeções locais;
     \item testar formalmente as restrições \(N > R\) e \(N > F > R\);
     \item construir validação narrativa e exercícios de robustez.

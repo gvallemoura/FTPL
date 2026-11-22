@@ -1,0 +1,11 @@
+check,n,value
+corr levels EMBI+ vs EMBI GD (overlap),202,0.9935867202239361
+corr changes EMBI+ vs EMBI GD (overlap),201,0.9948405757573889
+max |embi_spread - EMBI+| up to 2024-07 (should be 0),364,2.842170943040401e-14
+"mean embi_spread - EMBI GD after 2024-07 (splice gap, bp)",28,2.4678841175732518
+corr levels embi_spread_bp vs cds5y_bp,215,0.9245975803146224
+corr changes embi_spread_bp vs cds5y_bp,214,0.8829656565171606
+corr levels ltn_1y_pct vs swap_di_pre_360d_pct,308,0.9989147006943203
+corr changes ltn_1y_pct vs swap_di_pre_360d_pct,307,0.9859756589662769
+corr levels real_yield_5y_pct vs real_yield_10y_pct,264,0.9906629124907049
+corr changes real_yield_5y_pct vs real_yield_10y_pct,263,0.91236154101346
