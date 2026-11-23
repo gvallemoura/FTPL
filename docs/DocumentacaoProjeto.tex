@@ -40,8 +40,9 @@ principal do projeto, a estratégia de construção de choques de emissão, o no
 de construção de dados e a implementação da Etapa A de controles estruturais
 predeterminados. Também registra a Etapa B, dedicada às curvas de juros da ANBIMA,
 hoje alimentada pela ETTJ diária enviada pelo coautor (2006 a janeiro de 2025),
-o cronograma predeterminado de vencimentos, os gaps do PAF desde 2003 e a inflação
-implícita mensal.
+o cronograma predeterminado de vencimentos, os gaps do PAF desde 2003, a inflação
+implícita mensal, as equações de previsão de emissão e a escolha da medida de notícia
+fiscal usada na purga, com os choques purgados principais e de robustez.
 \end{abstract}
 
 \newpage
@@ -1151,6 +1152,19 @@ meses. As versões \path{_eom_lag1}, \path{_avg_lag1} e \path{_rev_lag1} são
 predeterminadas; as revisões \path{_rev_curr} são notícia fiscal contemporânea e
 destinam-se apenas à purga.
 
+As séries principais usam \path{baseCalculo = 0}: a mediana das respostas mais
+recentes informadas nos 30 dias anteriores à data de cálculo. Desde 23/11/2026 o
+script também baixa as medianas com \path{baseCalculo = 1}, que usam só as respostas
+informadas a partir do quarto dia útil anterior, e grava as mesmas variáveis com o
+prefixo \path{focus_primary_bc1} e \path{focus_dlsp_bc1} (16 colunas). A API só tem
+essa versão a partir de 31/03/2021, com 8 a 20 respondentes por ano de referência,
+contra 20 a 60 na versão principal; a primeira revisão é de 2021-04. Por isso ela é
+robustez e não substitui a série principal (Seção~\ref{sec:bc1}). O argumento
+\path{--fetch} permite consultar a API só para alguns prefixos, mantendo os demais
+nos arquivos brutos já salvos; a reexecução com
+\path{--fetch focus_primary_bc1,focus_dlsp_bc1} deixou todas as colunas anteriores
+idênticas, e a cadeia seguinte foi reexecutada com \path{--offline}.
+
 \subsection{Base Prisma do coautor}
 
 A base de notícia fiscal construída pelo coautor João a partir do Prisma Fiscal e do
@@ -1210,7 +1224,8 @@ partir dos arquivos mensais congelados do pacote de replicação de Carvalho Fil
 no Git e deve ser baixado do Zenodo para \path{data/raw/zenodo_24206681_fiscal_svar/}.
 O painel resultante,
 \path{data/clean/ftpl_monthly_panel_with_valuation_outcomes.csv}, tem 564 linhas e
-386 colunas (contando \path{month}).
+402 colunas (contando \path{month}; eram 386 antes das 16 colunas Focus com
+\path{baseCalculo = 1}).
 
 \begin{longtable}{p{0.30\textwidth}p{0.42\textwidth}p{0.18\textwidth}}
 \toprule
@@ -1284,8 +1299,8 @@ mesma definição do painel; \path{share_{g}_hist_mkt}, sobre o total em mercado
 \path{coverage_NFR_over_market}; e as versões predeterminadas
 \path{share_*_hist_lag1}, \path{share_*_hist_mkt_lag1}, \path{stock_*_hist_pib_lag1}
 e \path{gross_{g}_over_lag_stock_hist}. O painel resultante,
-\path{data/clean/ftpl_monthly_panel_with_stock_history.csv}, com 564 linhas e 436
-colunas (incluindo \path{month}, as 18 colunas do bloco real ampliado descrito abaixo
+\path{data/clean/ftpl_monthly_panel_with_stock_history.csv}, com 564 linhas e 452
+colunas (436 antes das colunas Focus com \path{baseCalculo = 1}; incluindo \path{month}, as 18 colunas do bloco real ampliado descrito abaixo
 e as 36 colunas de PCA da curva de juros; antes da ETTJ eram 400, e não 399, como
 constava por erro de contagem), passa a ser
 o mais completo do projeto.
@@ -1386,8 +1401,9 @@ estoque do eDPF; por isso só existe a partir de 2017-10 e contém apenas o prin
 O script \path{src/build_maturity_paf_hist.py} constrói um cronograma mais longo e
 recalcula os gaps do PAF com as participações longas. Ele lê
 \path{data/clean/ftpl_monthly_panel_with_stock_history.csv} e grava
-\path{data/clean/ftpl_monthly_panel_with_maturity_paf_hist.csv} (564 linhas e 529
-colunas, 93 novas, sem alterar as existentes).
+\path{data/clean/ftpl_monthly_panel_with_maturity_paf_hist.csv} (564 linhas e 545
+colunas, 93 novas, sem alterar as existentes; eram 529 antes das colunas Focus com
+\path{baseCalculo = 1}).
 
 \subsection{Fontes}
 
@@ -1478,8 +1494,8 @@ Saídas adicionais: \path{data/intermediate/maturity_paf/}, os diagnósticos
 
 O script \path{src/build_breakeven_outcomes.py} constrói variáveis de resultado de
 inflação implícita a partir das curvas diárias da Etapa B. Ele grava
-\path{data/clean/ftpl_monthly_panel_with_breakeven_outcomes.csv}, com 564 linhas e 548
-colunas, hoje o painel mais completo do projeto. Para os prazos de 1, 2, 3, 5, 7 e 10
+\path{data/clean/ftpl_monthly_panel_with_breakeven_outcomes.csv}, com 564 linhas e 564
+colunas. Para os prazos de 1, 2, 3, 5, 7 e 10
 anos:
 \begin{itemize}[leftmargin=1.2cm]
     \item \path{bei_{h}_pct}: média mensal em \(t\), a variável principal, comparável
@@ -1493,6 +1509,374 @@ de 3 e 6 meses foram excluídos. A validação confere que a diferença vale tod
 dias e que \path{bei_{h}_pct} em \(t\) é igual a \path{bei_{h}_avg_lag1} em \(t+1\) (e
 o mesmo para o fim do mês), exatamente nos 229 meses. A cobertura vai de 2006-01 a
 2025-01, até a chegada da extensão da ETTJ.
+
+\section{Equações de previsão de emissão}\label{sec:prev}
+
+O script \path{src/build_issuance_forecasts.py} estima a equação de previsão da
+Subseção de predeterminação (eq. 19 da nota metodológica) para cada classe
+\(j\in\{N,F,R\}\) e grava
+\path{data/clean/ftpl_monthly_panel_with_issuance_innovations.csv} (564 linhas, 683
+colunas). A variável dependente é a emissão bruta sobre o PIB acumulado em 12 meses
+defasado (\path{g_{j}_pib}). Os regressores são todos conhecidos antes dos leilões do
+mês \(t\):
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \(m_{t|t-1}^j\): serviço da dívida (principal e cupons) que vence em \(t\)
+    (\path{maturity_{j}_sched_pib_lag1}, Seção~\ref{sec:venc});
+    \item \(m_{t+1|t-1}^j\): serviço que vence em \(t+1\), calculado neste script a
+    partir do estoque por título do RMD 2.2 em \(t-1\), com cupons indexados pelo IPCA
+    ou IGP-M de \(t-2\), o último divulgado ao fim de \(t-1\). Antes de 2010-02 não há
+    estoque por título em \(t-1\) e usa-se o cronograma de \(t+1\)
+    (\path{maturity_lead1_source}). A correlação com o cronograma de \(t+1\) é de pelo
+    menos 0,998 em \(N\), \(F\) e \(R\);
+    \item defasagens 1 a 3 da emissão das três classes; estoque e participação da
+    própria classe; janela de vencimentos de 12 meses; trocas, recompras e vendas e
+    compras extraordinárias defasadas;
+    \item Selic (defasagem 1), IPCA em 12 meses (defasagem 1, divulgado por volta do
+    dia 10 de \(t\)), IBC-Br em 12 meses (defasagem 2, divulgado cerca de 45 dias
+    depois) e variação do câmbio (defasagem 1);
+    \item nível, inclinação e curvatura das curvas prefixada e IPCA no fim de \(t-1\);
+    EMBI e volatilidade realizada da taxa prefixada de 5 anos em \(t-1\);
+    \item expectativas Focus de primário e DLSP de 12 meses no fim de \(t-1\);
+    \item gap do PAF da própria classe e gap da parcela vincenda em 12 meses (versão
+    \path{rmd});
+    \item dummies de mês do calendário.
+\end{itemize}
+
+As três equações usam a mesma amostra, necessária para a projeção local conjunta, e
+os erros-padrão são HAC (Newey--West). A amostra base vai de 2006-11 a 2025-02 (220
+meses, 46 parâmetros), limitada pelo cronograma mensal e pela ETTJ. O \(R^2\) é 0,71
+em \(N\), 0,59 em \(F\) e 0,67 em \(R\), e o teste de Ljung--Box(12) não rejeita
+ausência de autocorrelação (\(p\ge 0{,}36\)). Cada real que vence em \(t\) eleva a
+emissão da mesma classe em cerca de 0,09 real, com significância em \(N\) e \(R\) e
+não em \(F\); o vencimento de \(t+1\) não é significativo. A correlação entre as
+inovações é 0,24 entre \(N\) e \(R\) e praticamente nula nos demais pares.
+
+O resíduo \(u_t^j\) (\path{u_{j}_base}) é a inovação de emissão; é contemporâneo e
+nunca entra como controle. As variantes de robustez são:
+
+\begin{center}
+\begin{tabular}{p{0.18\textwidth}p{0.72\textwidth}}
+\toprule
+Variante & Mudança em relação à base \\
+\midrule
+\path{long} & sem curva de juros; vai até 2026-06 (236 meses) \\
+\path{w12} & janelas de 12 meses por classe no lugar do cronograma mensal; 2004-03 a 2026-06 (268 meses) \\
+\path{pca} & curva resumida por componentes principais \\
+\path{principal} & vencimentos apenas com principal; desde 2010-02 \\
+\path{nolead} & sem \(m_{t+1|t-1}^j\) \\
+\path{stock} & emissão e vencimentos sobre o estoque defasado da classe \\
+\path{liq} & inclui a reserva de liquidez; desde 2015-02 \\
+\path{ramp} & bloco real com NTN-B e NTN-C (somente a equação de \(R\)) \\
+\path{base_rt} & erros de previsão em pseudo-tempo real, janela expansiva, desde 2014-07 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A correlação das inovações da base com as variantes vai de 0,84 a 1,00, exceto em
+\path{base_rt} (0,39 em \(N\), 0,71 em \(F\) e 0,72 em \(R\)), em que estimar 46
+parâmetros apenas com dados até \(t-1\) gera muito ruído. Os diagnósticos estão em
+\path{data/diagnostics/issuance_forecasts_*.csv} e a figura em
+\path{data/figures/issuance_forecasts.png}.
+
+\section{Escolha de \texorpdfstring{\(\Delta\mathcal{F}_t\)}{Delta F} e purga fiscal}\label{sec:purga}
+
+A purga da eq.~(\ref{eq:doc_survey_purge}) exige escolher a medida de notícia fiscal
+\(\Delta\mathcal{F}_t\). Esta seção registra as candidatas disponíveis no painel, os
+prós e contras de cada uma, a comparação com a estratégia de Carvalho Filho (2026) e
+os resultados da purga com a medida principal e as alternativas.
+
+\subsection{Candidatas}
+
+Todas as candidatas são notícia do mês \(t\) e entram apenas na purga. Nas revisões
+de primário, o sinal positivo indica superávit esperado maior (notícia boa); nas
+revisões de DLSP e no choque de Carvalho Filho, o sinal positivo é adverso. A tabela
+resume a amostra base das inovações; as correlações com o mercado usam a variação no
+mesmo mês do EMBI e do câmbio (alta = real mais fraco).
+
+\begin{center}
+\footnotesize
+\begin{tabular}{p{0.27\textwidth}ccccc}
+\toprule
+Medida & Cobertura & Base & Zeros & AR(1) & \(\rho\) \(\Delta\)EMBI / câmbio \\
+\midrule
+Focus primário 12m & 2000-03 a 2026-11 & 220 & 25\% & 0,30 & \(-0{,}04\) / \(-0{,}11\) \\
+Focus primário 36m & 2001-12 a 2026-11 & 220 & 30\% & 0,11 & 0,00 / 0,01 \\
+Focus DLSP 12m & 2000-03 a 2026-11 & 220 & 4\% & 0,37 & 0,24 / 0,24 \\
+Focus DLSP 36m & 2001-12 a 2026-11 & 220 & 5\% & 0,19 & 0,09 / 0,15 \\
+Prisma primário 12m & 2016-01 a 2026-10 & 110 & 0\% & 0,34 & \(-0{,}15\) / \(-0{,}18\) \\
+Prisma primário 36m & 2016-03 a 2026-10 & 99 & 0\% & 0,29 & 0,07 / \(-0{,}01\) \\
+Surpresa do primário (Prisma) & 2016-01 a 2026-09 & 110 & 0\% & 0,03 & \(-0{,}03\) / \(-0{,}07\) \\
+Choque de risco fiscal (Carvalho Filho) & 2005-12 a 2026-08 & 220 & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+O Focus primário de 12 meses e o Prisma primário de 12 meses têm correlação de 0,95.
+As revisões de primário e de DLSP têm correlação entre \(-0{,}5\) e \(-0{,}8\). A
+surpresa do primário quase não se correlaciona com as revisões (0,09 a 0,19).
+
+\subsection{Prós e contras de cada medida}
+
+\paragraph{Focus, resultado primário, 12 meses.}
+Prós: cobre toda a amostra e preserva os 220 meses da base; é a medida mais próxima
+do conceito da eq. (20) da nota, revisão da expectativa de superávit em evento fixo,
+sem o efeito mecânico de rolar o horizonte; é reproduzível pela API Olinda; e é quase
+a mesma informação do Prisma onde os dois coexistem. Contras: mede o setor público
+consolidado, e não o Governo Central que emite a dívida estudada; 25\% dos meses têm
+revisão nula, pela rigidez da mediana; usa \path{baseCalculo = 0}, mediana das
+respostas dos últimos 30 dias, o que suaviza a revisão de fim de mês e espalha a
+notícia entre meses vizinhos; e o horizonte de 12 meses é curto frente ao valor
+presente dos superávits que a FTPL considera.
+
+\paragraph{Focus, resultado primário, 36 meses.}
+Prós: mais perto do respaldo de longo prazo; mesma cobertura; traz informação além do
+12m (correlação de 0,52). Contras: mais ruído e mais zeros (30\%), porque poucos
+respondentes revisam o terceiro ano; quase nenhuma relação com os mercados no mesmo
+mês; sozinho, perde a notícia de curto prazo, mais ligada às necessidades de
+financiamento.
+
+\paragraph{Focus, DLSP, 12 e 36 meses.}
+Prós: cobertura longa, quase sem zeros; resume primário, juros, crescimento e câmbio
+num só número; é a variável usada por Carvalho Filho (2026). A correlação positiva com
+a depreciação não é contaminação contábil, pois o setor público é credor líquido em
+moeda estrangeira e a depreciação reduz a DLSP mecanicamente; é mais compatível com
+notícia fiscal acompanhada de prêmio de risco. Contras: a expectativa de DLSP/PIB
+também reage a Selic, inflação e PIB nominal, que são resultados ou canais das
+projeções locais, de modo que purgar por ela pode condicionar em um mediador; não é
+uma medida de respaldo; e o sinal frente ao respaldo é ambíguo, porque dívida
+esperada maior pode vir de juros e não de déficit.
+
+\paragraph{Prisma, resultado primário, 12 meses.}
+Prós: conceito certo (Governo Central, o mesmo emissor); pesquisa mensal com
+respondentes especializados; sem zeros; única medida cuja relação com os mercados tem
+o sinal esperado (notícia boa com queda do EMBI e apreciação). Contras: começa em
+2016 e corta a amostra para cerca de 110 meses, sem 2008 nem o período anterior à
+crise de 2015; as edições não fecham no fim do mês e o calendário de coleta precisa
+ser verificado; a extração ainda não é reproduzível.
+
+\paragraph{Prisma, resultado primário, 36 meses.}
+Prós: conceito certo e horizonte longo; única medida relacionada com a inflação
+implícita (correlação de 0,23 com a variação da BEI de 5 anos). Contras: apenas 99
+meses; o sinal da relação com a BEI é o oposto do esperado; mesmos problemas de data e
+reprodutibilidade do 12m.
+
+\paragraph{Surpresa do primário (realizado menos mediana Prisma), na data de divulgação.}
+Prós: a mais próxima de notícia pura (AR(1) de 0,03); informação que de fato chega no
+mês, independente de como os respondentes atualizam a mediana. Contras: mede o
+resultado de um único mês, ruído contábil e de calendário, e não revisão do respaldo
+futuro; data de divulgação aproximada (fim de \(t+1\)); começa em 2016. Funciona como
+complemento das revisões, e não como substituto.
+
+\paragraph{Séries do coautor descartadas.}
+O Focus de resultado nominal inclui juros e tem endogeneidade maior que a DLSP; o
+Focus de dívida bruta começa em 2018 e tem o mesmo problema de mediador; o Prisma de
+dívida bruta muda de conceito em 2021 (Governo Geral até 2020, Governo Central
+depois) e não pode ser emendado.
+
+\subsection{A estratégia de Carvalho Filho (2026)}
+
+Carvalho Filho (2026), ``Fiscal Risk, Real Interest Rates and the Stock Market:
+Evidence from Brazil'' (SSRN 7702078; pacote de replicação
+doi:10.5281/zenodo.24206681, CC-BY-4.0), não usa uma revisão de pesquisa diretamente.
+A notícia fiscal é um choque estrutural de risco fiscal num VAR bayesiano mensal
+(2005-12 a 2026-08, 12 defasagens, prior Minnesota) identificado por restrições de
+sinal:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item a variável fiscal é o nível da expectativa Focus de DLSP em horizonte fixo
+    de 12 meses, média mensal das medianas, com o mesmo método de horizonte fixo que
+    adaptamos em \path{build_fiscal_expectations_controls.py};
+    \item as demais variáveis são IBC-Br, IPCA em 12 meses, Selic, juro real de 5
+    anos, câmbio e Ibovespa real; VIX, Treasury de 10 anos e commodities entram como
+    exógenas;
+    \item o choque fiscal adverso eleva juntos, no impacto e no mês 1, a dívida
+    esperada, o juro real de 5 anos e o dólar. O choque monetário se distingue por
+    apreciar o câmbio e reduzir a inflação; o de demanda, por reduzir a dívida
+    esperada;
+    \item na robustez, a DLSP é trocada pela expectativa de déficit primário ou pela
+    DLSP de 36 meses (correlação de 0,93 com o choque da base). A revisão de evento
+    fixo aparece apenas na tabela narrativa dos oito episódios.
+\end{itemize}
+
+Das nossas opções, a mais próxima é a revisão Focus de DLSP de 12 meses. Com a série
+de choques do pacote de replicação, as correlações são:
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+Medida & Correlação com o choque de risco fiscal \\
+\midrule
+Focus DLSP 12m / 36m & 0,42 / 0,35 \\
+Focus primário 12m / 36m & \(-0{,}09\) / \(-0{,}05\) \\
+Prisma primário 12m / 36m & \(-0{,}09\) / \(-0{,}09\) \\
+Surpresa do primário & 0,04 \\
+\(u^N\) / \(u^F\) / \(u^R\) (base) & \(-0{,}09\) / 0,08 / \(-0{,}31\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+As diferenças em relação à nossa DLSP são três: média mensal em vez de fim de mês;
+resíduo de um VAR em vez de revisão bruta; e seleção, pelas restrições de sinal, da
+parte da revisão que vem com alta do juro real e depreciação. Duas conclusões seguem.
+Primeiro, revisões de primário e o choque de risco fiscal medem conceitos diferentes:
+o respaldo esperado, como na eq. (20), e o risco fiscal precificado, caminho da dívida
+mais prêmio. Segundo, a correlação de \(-0{,}31\) com \(u^R\) indica que, em meses de
+choque fiscal adverso, o Tesouro emite menos NTN-B do que o previsto, provavelmente
+recuando dos leilões indexados quando o juro real dispara. Esse componente é reação
+da gestão da dívida às condições de mercado e faz sentido retirá-lo; mas, como o
+choque é identificado com preços de ativos do próprio mês \(t\), usá-lo na purga traz
+juro real e câmbio contemporâneos para dentro dos choques, com risco de viés nas
+respostas de valuation. Além disso, o choque é uma estimativa com informação de toda a
+amostra (regressor gerado). Por isso entra apenas como robustez.
+
+\subsection{Purga: especificações}
+
+O script \path{src/build_purged_shocks.py} estima, separadamente para cada classe,
+\(u_t^j=a^j+\gamma^{j\prime}\Delta\mathcal{F}_t+\eta^{j\prime}W_t+\varepsilon_t^j\)
+por MQO, com erros-padrão HAC, e grava
+\path{data/clean/ftpl_monthly_panel_with_purged_shocks.csv} (564 linhas, 749
+colunas), hoje o painel mais completo do projeto. Os choques recebem o nome \path{eps_{j}_{especificação de u}_{purga}}; o
+choque principal é \path{eps_{j}_base_fprim}. As purgas, todas aplicadas a
+\path{u_{j}_base}, são:
+
+\begin{center}
+\small
+\begin{tabular}{p{0.17\textwidth}p{0.43\textwidth}p{0.3\textwidth}}
+\toprule
+Código & \(\Delta\mathcal{F}_t\) e tratamento & Amostra \\
+\midrule
+\path{fprim} & Focus primário 12m e 36m (\textbf{principal}) & 2006-11 a 2025-02 (220) \\
+\path{fprim_xev} & idem, \(\gamma\) estimado sem os meses de evento (2007-04 e 2020-03 a 07) e aplicado a todos os meses & 220 (214 na estimação) \\
+\path{fprim_dum} & idem, com as dummies de evento em \(W_t\); \(\varepsilon=0\) nesses meses & 220 \\
+\path{fprim16} & Focus primário na amostra do Prisma, para separar medida de amostra & 2016-03 a 2025-02 (99) \\
+\path{fprim_bc1} & Focus primário 12m e 36m com \path{baseCalculo = 1} & 2021-04 a 2025-02 (47) \\
+\path{fprim21} & Focus primário principal na amostra de \path{fprim_bc1} & 47 \\
+\path{pprim} & Prisma primário 12m e 36m & 2016-03 a 2025-02 (99) \\
+\path{pprim_surp} & Prisma primário e surpresa do primário & 99 \\
+\path{fdlsp} & Focus DLSP 12m e 36m & 220 \\
+\path{fprim_fdlsp} & primário e DLSP juntos & 220 \\
+\path{cfrisk} & choque de risco fiscal de Carvalho Filho (restrições de sinal) & 220 \\
+\path{cfrisk_narr} & idem, com restrições narrativas & 220 \\
+\path{fprim_cfrisk} & Focus primário e choque de Carvalho Filho & 220 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A purga principal também é aplicada a todas as variantes da equação de previsão
+(\path{long}, \path{w12}, \path{pca}, \path{principal}, \path{nolead},
+\path{stock}, \path{liq}, \path{ramp} e \path{base_rt}). As séries de Carvalho Filho
+são lidas do pacote de replicação guardado em
+\path{data/raw/zenodo_24206681_fiscal_svar/} (fora do Git), com SHA-256 no arquivo de
+auditoria, e acrescentadas ao painel como \path{cf_fiscal_risk} e
+\path{cf_fiscal_risk_narr}.
+
+\subsection{Resultados}
+
+\begin{center}
+\small
+\begin{tabular}{lccc}
+\toprule
+Purga & \(R^2\) (\(N\) / \(F\) / \(R\)) & \(p\) do teste conjunto de \(\gamma\) & menor \(\rho(\varepsilon,\varepsilon^{\mathrm{fprim}})\) \\
+\midrule
+\path{fprim} & 0,003 / 0,001 / 0,006 & \(\ge 0{,}32\) & -- \\
+\path{fprim_xev} & 0,002 / 0,008 / 0,006 & \(\ge 0{,}70\) & 0,98 \\
+\path{fprim_dum} & 0,039 / 0,037 / 0,026 & \(\ge 0{,}70\) & 0,98 \\
+\path{fprim16} & 0,001 / 0,002 / 0,013 & \(\ge 0{,}68\) & 0,999 \\
+\path{fprim_bc1} & 0,017 / 0,017 / \textbf{0,155} & 0,003 em \(R\); \(\ge 0{,}39\) nas demais & 0,92 (\(R\)) \\
+\path{fprim21} & 0,066 / 0,004 / 0,107 & \(\ge 0{,}24\) & 0,95 \\
+\path{pprim} & 0,007 / 0,001 / 0,004 & 0,045 em \(N\); \(\ge 0{,}70\) nas demais & 0,99 \\
+\path{pprim_surp} & 0,027 / 0,020 / 0,026 & 0,011 em \(N\) & 0,98 \\
+\path{fdlsp} & 0,003 / 0,012 / 0,010 & \(\ge 0{,}15\) & 0,99 \\
+\path{fprim_fdlsp} & 0,011 / 0,014 / 0,020 & \(\ge 0{,}09\) & 0,99 \\
+\path{cfrisk} & 0,008 / 0,006 / \textbf{0,098} & \(<0{,}001\) em \(R\) & 0,95 (\(R\)) \\
+\path{cfrisk_narr} & 0,022 / 0,021 / \textbf{0,084} & \(<0{,}001\) em \(R\); 0,049 em \(N\) & 0,95 (\(R\)) \\
+\path{fprim_cfrisk} & 0,011 / 0,006 / \textbf{0,104} & \(<0{,}001\) em \(R\) & 0,95 (\(R\)) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+As revisões de pesquisa, de primário ou de DLSP, Focus ou Prisma, explicam no máximo
+2\% da variância das inovações. O teste conjunto de \(\gamma=0\) só rejeita a 5\%
+nas purgas com Prisma na equação de \(N\) (\(p=0{,}045\) sem a surpresa e 0,011 com
+ela), com coeficientes individuais insignificantes e amostra de 99 meses; a
+evidência é frágil. Os choques purgados têm correlação de
+pelo menos 0,98 com o principal. Com as dummies de evento, o \(R^2\) sobe para 3--4\%,
+mas quem explica o aumento são as próprias dummies, que zeram os choques de 2020;
+os coeficientes das revisões continuam insignificantes. A única medida com poder
+relevante é o choque de Carvalho Filho na equação de \(R\): \(\gamma^R\) tem
+estatística \(t\) de \(-5{,}8\) e o \(R^2\) chega a 10\%, sem efeito relevante em
+\(N\) e \(F\). A correlação entre os choques principais é 0,24 entre \(N\) e \(R\) e
+praticamente nula nos demais pares. A purga principal aplicada às variantes da
+equação de previsão tem \(R^2\le 0{,}013\) em todas, e os choques correspondentes
+reproduzem as correlações das inovações. Os resultados estão em
+\path{data/diagnostics/purged_shocks_{gamma,fit,correlations,validation,audit}.csv},
+\path{purged_shock_lists.json} e na figura \path{data/figures/purged_shocks.png}.
+
+\subsection{Revisões Focus com baseCalculo = 1}\label{sec:bc1}
+
+Com \path{baseCalculo = 0}, a mediana de fim de mês ainda inclui respostas de até 30
+dias antes, de modo que parte da notícia de \(t\) só aparece na revisão de \(t+1\) e
+parte da de \(t-1\) aparece em \(t\). A versão com \path{baseCalculo = 1} usa apenas
+respostas dos últimos quatro dias úteis. A comparação nos 68 meses comuns
+(2021-04 a 2026-11, \path{data/diagnostics/focus_basecalculo_comparison.csv} e
+\path{data/figures/focus_basecalculo_comparison.png}) é:
+
+\begin{center}
+\small
+\begin{tabular}{lcccc}
+\toprule
+ & Primário 12m & Primário 36m & DLSP 12m & DLSP 36m \\
+\midrule
+\(\rho\) dos níveis (fim de \(t-1\)) & 0,98 & 0,76 & 0,99 & 0,95 \\
+\(\rho\) das revisões no mesmo mês & 0,72 & 0,41 & 0,52 & 0,32 \\
+\(\rho\)(revisão bc0 em \(t\), bc1 em \(t-1\)) & 0,41 & 0,14 & 0,16 & 0,15 \\
+desvio-padrão da revisão, bc0 / bc1 & 0,12 / 0,18 & 0,12 / 0,28 & 0,50 / 0,81 & 0,83 / 1,97 \\
+AR(1) da revisão, bc0 / bc1 & 0,51 / 0,02 & 0,18 / \(-0{,}30\) & 0,00 / \(-0{,}34\) & \(-0{,}06\) / \(-0{,}40\) \\
+meses com revisão nula, bc0 / bc1 & 13\% / 0\% & 6\% / 6\% & 0\% / 0\% & 6\% / 0\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+No primário de 12 meses a nova versão faz o que se esperava: a revisão deixa de ser
+persistente (AR(1) de 0,51 para 0,02), não tem meses nulos, e a revisão antiga em
+\(t\) se correlaciona 0,41 com a nova em \(t-1\), sinal de que a janela de 30 dias
+arrasta notícia de um mês para o seguinte. Nos demais indicadores a nova versão troca
+suavização por ruído: com poucos respondentes, a mediana muda com a composição de
+quem respondeu nos últimos dias, e as revisões ficam mais voláteis e com
+autocorrelação negativa (\(-0{,}30\) a \(-0{,}40\)), típica de erro de medida que se
+reverte.
+
+Na purga (47 meses, 2021-04 a 2025-02), a versão nova explica 1,7\% de \(u^N\) e de
+\(u^F\) e 15,5\% de \(u^R\), com a revisão de 36 meses significativa em \(R\)
+(\(t=3{,}2\); teste conjunto \(p=0{,}003\)): superávit esperado maior vem com mais
+emissão de NTN-B do que a prevista. A versão principal na mesma amostra
+(\path{fprim21}) explica 10,7\% de \(u^R\), sem significância (\(p=0{,}24\)). Com
+47 meses, dois regressores e uma revisão de 36 meses ruidosa, o resultado é frágil.
+Os choques purgados com a versão nova têm correlação de 0,99 (\(N\), \(F\)) e 0,92
+(\(R\)) com o choque principal. Conclusão: a versão principal continua sendo a de
+\path{baseCalculo = 0}, a única que cobre a amostra; \path{fprim_bc1} entra como
+robustez para o período recente, e o resultado em \(R\) deve ser reavaliado quando a
+amostra da ETTJ for estendida após 2025-02.
+
+\subsection{Leitura e decisões pendentes}
+
+\begin{enumerate}[leftmargin=1.2cm]
+    \item A escolha entre as revisões de pesquisa quase não altera os choques. Pesam
+    mais o tratamento de 2020 (dummies na purga ou na projeção local) e o corte da
+    amostra em 2016 exigido pelo Prisma.
+    \item A medida principal é o Focus primário de 12 e 36 meses: segue o conceito de
+    respaldo da eq. (20), não usa preços de ativos e cobre toda a amostra. O Prisma
+    (com \path{fprim16} como comparação na mesma amostra) é a robustez principal; a
+    DLSP e o choque de Carvalho Filho são as alternativas de risco fiscal precificado.
+    \item O choque de Carvalho Filho explica cerca de 10\% de \(u^R\), enquanto as
+    pesquisas explicam perto de zero. Isso informa a decisão de identificação pendente
+    com o coautor: purgar as inovações também da notícia fiscal precificada, e não só
+    da esperada, e a proposta do coautor de usar a notícia fiscal como choque.
+    \item Pendências técnicas: datar o calendário do Prisma e a divulgação do
+    resultado realizado e obter as planilhas originais do Prisma. As revisões Focus
+    com \path{baseCalculo = 1} já foram construídas (Subseção~\ref{sec:bc1}).
+\end{enumerate}
 
 \section{Estado atual do projeto}
 
@@ -1535,7 +1919,14 @@ econométrica dos choques de emissão.
     \item cronograma predeterminado de vencimentos (principal e cupons) desde
     2006-11, janelas de 12 meses desde 2000-01 e gaps do PAF desde 2003-01 em três
     versões;
-    \item inflação implícita mensal como variável de resultado, de 2006-01 a 2025-01.
+    \item inflação implícita mensal como variável de resultado, de 2006-01 a 2025-01;
+    \item equações de previsão de emissão por \(N\), \(F\) e \(R\) e inovações
+    \(u_t^j\), com nove variantes de robustez (Seção~\ref{sec:prev});
+    \item análise das medidas de \(\Delta\mathcal{F}_t\), comparação com Carvalho Filho
+    (2026) e choques purgados \(\varepsilon_t^j\) com o Focus primário e doze
+    alternativas (Seção~\ref{sec:purga});
+    \item revisões Focus com \path{baseCalculo = 1} (2021-04 em diante), comparadas
+    com a versão principal e usadas como robustez da purga.
 \end{itemize}
 
 \subsection{Ainda pendente}
@@ -1545,12 +1936,11 @@ econométrica dos choques de emissão.
     mantidas como \path{unclear};
     \item complementar datas exatas de publicação dos PAFs, se forem necessárias
     para janelas de validade mais precisas;
-    \item escolher a medida baseline de \(\Delta\mathcal{F}_t^P\) entre as séries Focus
-    e Prisma e datar a divulgação da surpresa do primário;
+    \item confirmar com o coautor a medida principal de \(\Delta\mathcal{F}_t\) e a
+    decisão sobre purgar também a notícia fiscal precificada; datar o calendário do
+    Prisma e a divulgação da surpresa do primário;
     \item obter a exportação do painel Qlik com as expectativas do Prisma de 2024 em
     diante usada na base do coautor;
-    \item estimar equações de previsão de emissão por \(N\), \(F\) e \(R\);
-    \item obter resíduos de emissão e choques survey-purged;
     \item importar a extensão da ETTJ prometida pelo coautor (antes de 2006 e depois
     de janeiro de 2025) e repetir a cadeia a partir da Etapa B;
     \item estender o cronograma mensal de vencimentos para antes de 2006-11, com

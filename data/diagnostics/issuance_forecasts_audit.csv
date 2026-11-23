@@ -1,0 +1,4 @@
+item,file,sha256,first,last
+RMD 2.2 security stock (build_maturity_paf_hist output),data/intermediate/maturity_paf/rmd_security_stock_monthly.csv,d712cc9536c864b781e2b9f6a1a1493084db05ed1d6c8aa808169e24cc268ef0,2010-01-01,2026-05-01
+ANBIMA ETTJ daily curves (Etapa B output),data/intermediate/anbima/anbima_yield_curve_features_daily.csv,fd9e6d112a9285cf5495487c31a050503ca8c5d1c16e4815d68e07ed0c44c5aa,,
+SGS 189 IGP-M % m/m,data/raw/bcb/sgs_189_20261123T015201Z.csv,f71e83c364553eb9f64dfad057c45d6c65ffbfd2c6bb3c029d6342e96a9315f0,1989-06-01,2026-10-01

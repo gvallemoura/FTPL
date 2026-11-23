@@ -30,7 +30,13 @@ criados dois estágios novos: `build_maturity_paf_hist.py` (vencimentos programa
 por classe com principal e cupons, janelas de 12 meses, composição e prazo médio do
 RMD e gaps do PAF recalculados com as participações longas) e
 `build_breakeven_outcomes.py` (inflação implícita mensal como variável de
-resultado).
+resultado); (vii) criado `build_issuance_forecasts.py`, com as equações de previsão
+de emissão por classe (eq. 19 da nota metodológica) e as inovações \(u_t^j\);
+(viii) analisadas as medidas de \(\Delta\mathcal{F}_t\), comparadas com Carvalho Filho
+(2026), e criado `build_purged_shocks.py`, com a purga pelo Focus primário e doze
+alternativas (DocumentacaoProjeto.tex, seção "Escolha de ΔF e purga fiscal"); (ix)
+construídas as revisões Focus com `baseCalculo = 1` (só existem desde 2021-03-31),
+usadas como robustez da purga.
 
 ## Research Objective
 
@@ -251,10 +257,10 @@ Imports an ANBIMA ETTJ workbook into the Etapa B input format. Run before
 
 `ftpl_build_data_notebook.ipynb` → `build_structural_controls.py` →
 `import_anbima_ettj.py` → `build_anbima_yield_curve_controls.py` →
-`build_fiscal_expectations_controls.py [--offline]` →
+`build_fiscal_expectations_controls.py [--offline | --fetch PREFIX,...]` →
 `build_prisma_fiscal_news.py [--offline]` → `build_valuation_outcomes.py` →
 `build_stock_history_sgs.py [--offline]` → `build_maturity_paf_hist.py [--offline]`
-→ `build_breakeven_outcomes.py`. On 22/11/2026 the chain was rerun from
+→ `build_breakeven_outcomes.py` → `build_issuance_forecasts.py [--offline]` → `build_purged_shocks.py`. On 22/11/2026 the chain was rerun from
 `import_anbima_ettj.py` on, with `--offline` (no new Focus or SGS pulls). Against
 the previous commit, every downstream panel gained the 36 PCA columns and changed
 only in the 72 curve columns (previously empty); no other column changed.
@@ -281,6 +287,21 @@ UTC timestamp in `data/raw/focus/`; offline runs (`--offline`) fall back to the 
 saved pull, then to the frozen Zenodo files. `PUBLICATION_LAG_DAYS` (default 0)
 can require survey values to be published before month end (tested: levels
 correlate 0.9999 with the default, contemporaneous revisions 0.96; kept at 0).
+
+baseCalculo = 1 (added 23/11/2026): `focus_primary_bc1_*` and `focus_dlsp_bc1_*`
+(16 columns, same suffixes) use the median of answers from the last 4 business days
+instead of the 30-day window of `baseCalculo = 0`. The API has them only from
+2021-03-31 (first revision 2021-04), with 8–20 respondents per reference year
+(20–60 for baseCalculo = 0): robustness only, the main series stay at baseCalculo
+= 0. `--fetch focus_primary_bc1,focus_dlsp_bc1` pulled only these from the API; all
+previous columns were unchanged, and the downstream chain was rerun with
+`--offline` (every panel from this one on gains the 16 columns). Comparison over
+2021-04..2026-11 (`focus_basecalculo_comparison.csv`, figure
+`focus_basecalculo_comparison.png`): for the 12m primary, the revision loses its
+persistence (AR(1) 0.51 → 0.02, no zero months) and the old revision in t
+correlates 0.41 with the new one in t-1 (the 30-day window carries news into the
+next month); for the 36m primary and the DLSP the new revisions are noisier, with
+negative AR(1) (−0.30 to −0.40) from the small and changing respondent pool.
 
 Event impulse dummies, chosen by documented cause rather than outlier size:
 `d_focus_gdprev_2007m04` (IBGE national-accounts revision lowers debt ratios
@@ -455,7 +476,7 @@ maturity (2005-12, 2006-11 on).
 Monthly break-even inflation outcomes from the Etapa B daily curves
 (`data/intermediate/anbima/anbima_yield_curve_features_daily.csv`). Writes
 `data/clean/ftpl_monthly_panel_with_breakeven_outcomes.csv` (+19 columns, the
-latest panel, 564 × 548). For h = 1, 2, 3, 5, 7, 10 years: `bei_{h}_pct` (monthly
+panel, 564 × 564). For h = 1, 2, 3, 5, 7, 10 years: `bei_{h}_pct` (monthly
 mean in t, the main outcome, comparable with the other valuation outcomes),
 `bei_{h}_eom_pct` (last business day of t) and `bei_{h}_fisher_pct` (Fisher
 version, robustness); `bei_n_days`. 3m/6m excluded (extrapolated real curve).
@@ -464,6 +485,96 @@ Checks: BEI = PRE − IPCA daily, and `bei_{h}_pct`(t) = `bei_{h}_avg_lag1`(t+1)
 2006-01 to 2025-01, until the ETTJ extension arrives. Diagnostics
 `breakeven_outcomes_{audit,validation,diagnostics}.csv`,
 `breakeven_outcome_lists.json`; figure `data/figures/breakeven_outcomes.png`.
+
+### `build_issuance_forecasts.py`
+
+Issuance forecasting equations (eq. 19 of the methodological note) and issuance
+innovations. Reads the break-even panel and writes
+`data/clean/ftpl_monthly_panel_with_issuance_innovations.csv` (+119 columns, the
+panel, 564 × 683). For j in {N, F, R}, OLS of `g_{j}_pib` (gross issuance
+over lagged 12-month GDP) on:
+
+- `maturity_{j}_sched_pib_lag1` (due in t) and `maturity_lead1_{j}_sched_pib_lag1`
+  (due in t+1), both known at the end of t-1. The lead is built here from the RMD
+  2.2 stock at t-1 (coupons with the index of t-2); before 2010-02 it is proxied by
+  the schedule due in t+1 (`maturity_lead1_source`). It correlates ≥ 0.998 with the
+  schedule due in t+1;
+- issuance lags 1–3 of all three classes; own `stock_{j}_hist_pib_lag1` and
+  `share_{j}_hist_lag1`; `maturity12m_total_rmd_pib_lag1`; lagged exchange,
+  buyback, extra-sale and extra-purchase values;
+- `selic_target_pa_lag1`, `ipca_yoy_pct_lag1` (released around day 10 of t),
+  `ibc_br_yoy_pct_lag2` (released ~45 days later), `brl_usd_mom_pct_lag1`;
+- PRE and IPCA curve level, slope and curvature (5y, 5y−1y, 1y-5y-10y, eom, t-1);
+  `embi_spread_bp_avg_lag1` and `pre_5y_rvol_bp_lag1` (sd of daily changes of the
+  5y PRE rate in t-1, bp);
+- `focus_primary_12m_eom_lag1`, `focus_dlsp_12m_eom_lag1`;
+- `paf_gap_{j}_rmd_lag1` and `paf_gap_maturing_12m_rmd_lag1`;
+- calendar-month dummies.
+
+The three equations share one sample (needed for the joint LP); HAC Newey–West
+standard errors. Baseline sample 2006-11 to 2025-02 (220 months, 46 parameters,
+limited by the ETTJ); R² 0.71 (N), 0.59 (F), 0.67 (R); Ljung–Box(12) p ≥ 0.36.
+Due-in-t maturities raise same-class issuance by about 0.09 per real (significant for
+N and R, not for F); the t+1 lead is not significant. Residual correlations: N–R 0.24,
+N–F and F–R about 0. Preview for the purge: the base innovations are almost
+uncorrelated with the contemporaneous Focus and Prisma fiscal revisions (|ρ| ≤ 0.09,
+no p < 0.18).
+
+Output columns: `u_{j}_{spec}` (innovation, contemporaneous, never a control) and
+`ghat_{j}_{spec}`, plus the derived predetermined regressors. Specs: `base`; `long`
+(no curve, to 2026-06, 236 months); `w12` (12-month class windows instead of the
+monthly schedule, 2004-03 to 2026-06, 268 months); `pca`; `principal` (2010-02+);
+`nolead`; `stock` (issuance and maturities over the lagged class stock); `liq`
+(+ liquidity reserve, 2015-02+); `ramp` (`u_Ramp_ramp`, R = NTN-B + NTN-C);
+`base_rt` (pseudo-real-time forecast errors, expanding window, from 2014-07). Base
+innovations correlate 0.84–1.00 with every spec except `base_rt` (0.39 N, 0.71 F,
+0.72 R). Diagnostics `issuance_forecasts_{audit,validation,fit,coefficients,wald,
+residual_correlations}.csv`, `issuance_forecast_lists.json`; intermediates in
+`data/intermediate/issuance_forecasts/`; figure `data/figures/issuance_forecasts.png`.
+
+### `build_purged_shocks.py`
+
+Survey purge (eq. 21): for each class, OLS of `u_{j}_base` on a constant and the
+fiscal news \(\Delta\mathcal{F}_t\) of month t, HAC standard errors; the residual is
+the shock `eps_{j}_{uspec}_{purge}`. Writes
+`data/clean/ftpl_monthly_panel_with_purged_shocks.csv` (+66 columns, the latest
+panel, 564 × 749). The main shock is `eps_{j}_base_fprim`.
+
+| Purge | \(\Delta\mathcal{F}_t\) | Sample |
+|---|---|---|
+| `fprim` (main) | Focus primary 12m + 36m revisions | 2006-11..2025-02 (220) |
+| `fprim_xev` | same, gamma estimated without 2007-04 and 2020-03..07, applied to all months | 220 |
+| `fprim_dum` | same + event dummies (eps = 0 in those months) | 220 |
+| `fprim16` | Focus primary on the Prisma sample | 2016-03..2025-02 (99) |
+| `fprim_bc1` | Focus primary 12m + 36m with baseCalculo = 1 | 2021-04..2025-02 (47) |
+| `fprim21` | main Focus primary on the `fprim_bc1` sample | 47 |
+| `pprim` / `pprim_surp` | Prisma primary 12m + 36m, without / with the release-dated surprise | 99 |
+| `fdlsp` / `fprim_fdlsp` | Focus DLSP 12m + 36m, alone / with the primary | 220 |
+| `cfrisk` / `cfrisk_narr` | Carvalho Filho (2026) fiscal-risk shock, sign / narrative restrictions | 220 |
+| `fprim_cfrisk` | Focus primary + `cfrisk` | 220 |
+
+The baseline purge is also applied to every forecasting variant (`eps_{j}_{long,
+w12,pca,principal,nolead,stock,liq,base_rt}_fprim`, `eps_Ramp_ramp_fprim`). The
+Carvalho Filho shocks (posterior medians, + = adverse) are read from the git-ignored
+replication package in `data/raw/zenodo_24206681_fiscal_svar/` (SHA-256 in the
+audit) and added as `cf_fiscal_risk`, `cf_fiscal_risk_narr`; cite
+doi:10.5281/zenodo.24206681 (CC-BY-4.0).
+
+Results: survey revisions (Focus or Prisma, primary or DLSP) explain at most 2.7% of
+the innovations; joint tests reject gamma = 0 at 5% only for Prisma in the N
+equation (p = 0.045; 0.011 with the surprise; individual t-stats insignificant,
+99 months). Purged shocks correlate ≥ 0.98 with the main one. Event dummies raise R²
+to 3–4% only by zeroing 2020. The Carvalho Filho shock explains about 10% of
+`u_R_base` (t = −5.8; less NTN-B issuance than predicted in adverse fiscal-risk
+months), nothing relevant in N and F; those shocks correlate 0.95 with the main R
+shock. Its correlation with our candidates: DLSP 12m 0.42, DLSP 36m 0.35, primary
+revisions about −0.09. Diagnostics `purged_shocks_{audit,validation,gamma,fit,
+correlations}.csv`, `purged_shock_lists.json`; figure `data/figures/purged_shocks.png`.
+baseCalculo = 1 purge (47 months): R² 1.7% (N, F) and 15.5% (R; 36m revision
+t = 3.2, joint p = 0.003); the main measure on the same months explains 10.7% of
+u_R with p = 0.24. Fragile (47 months, noisy 36m revision); shocks correlate 0.99
+(N, F) and 0.92 (R) with the main ones. Open: date the Prisma survey and the RTN
+release; decide with João whether to purge priced fiscal news too.
 
 #### Other files in `DadosJoao/data/` (audited 22/11/2026)
 
@@ -555,7 +666,9 @@ earlier or auxiliary R script and is not part of the active Python pipeline.
 │   ├── build_valuation_outcomes.py
 │   ├── build_stock_history_sgs.py
 │   ├── build_maturity_paf_hist.py
-│   └── build_breakeven_outcomes.py
+│   ├── build_breakeven_outcomes.py
+│   ├── build_issuance_forecasts.py
+│   └── build_purged_shocks.py
 ├── notebooks/
 │   ├── ftpl_build_data_notebook.ipynb
 │   ├── build_structural_controls.ipynb
@@ -664,16 +777,20 @@ The principal current panels are:
   observations (1979-12 to 2026-11) and 192 columns;
 - `ftpl_monthly_panel_with_yield_curve_controls.csv`: 564 × 300, Etapa B curve
   controls and PCA factors from the ANBIMA ETTJ, with data for 2006-02 to 2025-02;
-- `ftpl_monthly_panel_with_fiscal_expectations.csv`: 564 × 328 (Focus);
-- `ftpl_monthly_panel_with_fiscal_news.csv`: 564 × 368 (Prisma/Focus news);
-- `ftpl_monthly_panel_with_valuation_outcomes.csv`: 564 × 386 (adds sovereign
+- `ftpl_monthly_panel_with_fiscal_expectations.csv`: 564 × 344 (Focus, incl. 16 baseCalculo = 1 columns);
+- `ftpl_monthly_panel_with_fiscal_news.csv`: 564 × 384 (Prisma/Focus news);
+- `ftpl_monthly_panel_with_valuation_outcomes.csv`: 564 × 402 (adds sovereign
   spread and yields);
-- `ftpl_monthly_panel_with_stock_history.csv`: 564 × 436 (adds stock and shares
+- `ftpl_monthly_panel_with_stock_history.csv`: 564 × 452 (adds stock and shares
   by class from 2000-02, `*_hist`);
-- `ftpl_monthly_panel_with_maturity_paf_hist.csv`: 564 × 529 (maturity schedule,
+- `ftpl_monthly_panel_with_maturity_paf_hist.csv`: 564 × 545 (maturity schedule,
   RMD composition and long PAF gaps);
-- `ftpl_monthly_panel_with_breakeven_outcomes.csv`: 564 × 548, the latest and most
-  complete panel (adds monthly break-even outcomes).
+- `ftpl_monthly_panel_with_breakeven_outcomes.csv`: 564 × 564 (adds monthly
+  break-even outcomes);
+- `ftpl_monthly_panel_with_issuance_innovations.csv`: 564 × 683 (adds issuance
+  forecasts and innovations);
+- `ftpl_monthly_panel_with_purged_shocks.csv`: 564 × 749, the latest and most
+  complete panel (adds survey-purged shocks and the Carvalho Filho shocks).
 
 Column counts include `month`.
 
@@ -736,15 +853,20 @@ Completed or substantially implemented:
 - predetermined maturity schedule (principal + coupons) from 2006-11, 12-month
   maturity windows from 2000-01, and PAF gaps from 2003-01 in three versions
   (`build_maturity_paf_hist.py`);
-- monthly break-even outcomes, 2006-01 to 2025-01 (`build_breakeven_outcomes.py`).
+- monthly break-even outcomes, 2006-01 to 2025-01 (`build_breakeven_outcomes.py`);
+- issuance forecasting equations and innovations \(u_t^j\), baseline 2006-11 to
+  2025-02 plus nine robustness versions (`build_issuance_forecasts.py`);
+- analysis of the \(\Delta\mathcal{F}_t\) candidates and survey-purged shocks
+  \(\varepsilon_t^j\), main (Focus primary) and twelve alternatives, including the
+  baseCalculo = 1 Focus revisions (2021-04+)
+  (`build_purged_shocks.py`).
 
 Not yet implemented or not yet populated:
 
-- choice of the baseline \(\Delta\mathcal{F}_t^P\) (Prisma vs Focus, horizon) and
-  exact release dating of the Prisma surprise;
+- confirmation with João of the main \(\Delta\mathcal{F}_t\) and of whether to purge
+  priced fiscal news; exact dating of the
+  Prisma survey and of the primary-surprise release;
 - raw Prisma spreadsheets and Focus pulls behind João's dataset;
-- issuance forecasting equations and residual innovations \(u_t^j\);
-- survey-purged issuance shocks \(\varepsilon_t^j\);
 - ETTJ extension before 2006-01 and after 2025-01 (requested from João; the
   2005 baseline start currently has no curve controls for 2005-01 to 2006-01);
 - monthly maturity schedule before 2006-11 (would need older RMD security-level
@@ -757,15 +879,11 @@ Recommended order of work:
 
 1. Import João's extended ETTJ (`import_anbima_ettj.py --source ...`) and rerun
    the chain from Etapa B on; audit coverage.
-2. Use `maturity_{g}_sched_*` and the `rmd` PAF gaps in the forecasting
-   equations instead of the eDPF proxy and the 2017+ PAF gaps.
-3. Choose the baseline \(\Delta\mathcal{F}_t^P\) from the Focus and Prisma series
-   and fix the release timing of the Prisma surprise.
-4. Estimate the three issuance forecasting equations using the structural and
-   yield-curve controls available at `t-1`.
-5. Purge `u_t^j` to obtain `epsilon_t^j`, documenting the information set
-   and sample loss.
-6. Estimate local projections and test the primary `N > R` and sharper `N > F > R`
+2. Confirm the purge choices with João (main measure, 2020 treatment, priced
+   fiscal news).
+3. Re-estimate the forecasting equations and the purge when the extended ETTJ
+   arrives.
+4. Estimate local projections and test the primary `N > R` and sharper `N > F > R`
    restrictions, followed by state-dependence and valuation-outcome robustness.
 
 ## Notes And Open Issues

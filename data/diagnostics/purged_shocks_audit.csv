@@ -1,0 +1,3 @@
+item,file,sha256,first,last
+"Carvalho Filho (2026) cf_fiscal_risk (posterior median, + = adverse)",data/raw/zenodo_24206681_fiscal_svar/fiscal_svar/results/baseline/shocks.csv,e16a0bfcd736cfd05bb9ebebfa8099034dcf0ab4351dc8686643e0c5d584a1ea,2005-12-01,2026-08-01
+"Carvalho Filho (2026) cf_fiscal_risk_narr (posterior median, + = adverse)",data/raw/zenodo_24206681_fiscal_svar/fiscal_svar/results/narr_baseline_narrative/shocks.csv,7ce0e546c08ce9a23c7f8b2fecf8b566d8433a9c03b119afc80fa28311b85760,2005-12-01,2026-08-01

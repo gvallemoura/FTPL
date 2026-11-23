@@ -38,8 +38,18 @@ Source priority: (1) live Olinda API, saved to ``data/raw/focus/`` with a UTC
 timestamp; (2) the newest previously saved raw file; (3) the frozen file from
 the Zenodo replication package. The source used is recorded in the audit file.
 
+baseCalculo = 1 versions (prefixes ``focus_primary_bc1`` and ``focus_dlsp_bc1``): the
+median of the latest answers given from the 4th business day before the
+calculation date (baseCalculo = 0 uses answers from the previous 30 days), so
+month-end revisions are not smoothed by stale answers. The API only has them from
+2021-03-31 on, with fewer respondents (about 8-20 against 20-60), so they are a
+robustness version on 2021-04+ and do not replace the baseCalculo = 0 series.
+Diagnostics compare both versions on the common months.
+
 Run from the project root:  python3 src/build_fiscal_expectations_controls.py
-Optional flag: --offline (skip the API and use local files).
+Optional flags: --offline (skip the API and use local files);
+--fetch PREFIX[,PREFIX] (call the API only for these prefixes, local files for
+the others; e.g. --fetch focus_primary_bc1,focus_dlsp_bc1).
 """
 
 from __future__ import annotations
@@ -86,11 +96,14 @@ OLINDA_URL = (
     "ExpectativasMercadoAnuais"
 )
 
-# variable prefix -> (Focus indicator name, frozen Zenodo file name)
+# variable prefix -> (Focus indicator name, frozen Zenodo file name, baseCalculo)
 INDICATORS = {
-    "focus_dlsp": ("Dívida líquida do setor público", "focus_annual_debt.csv"),
-    "focus_primary": ("Resultado primário", "focus_annual_primary.csv"),
+    "focus_dlsp": ("Dívida líquida do setor público", "focus_annual_debt.csv", 0),
+    "focus_primary": ("Resultado primário", "focus_annual_primary.csv", 0),
+    "focus_dlsp_bc1": ("Dívida líquida do setor público", None, 1),
+    "focus_primary_bc1": ("Resultado primário", None, 1),
 }
+MAIN_PREFIXES = ["focus_dlsp", "focus_primary"]  # baseCalculo = 0, full sample
 # horizon label -> years ahead of the survey year for the first reference year
 HORIZONS = {"12m": 0, "36m": 2}
 
@@ -161,13 +174,14 @@ def find_input_panel() -> Path:
 # ----------------------------------------------------------------------------
 # download / load
 # ----------------------------------------------------------------------------
-def fetch_focus_annual(indicator: str, page: int = 10000, tries: int = 3) -> pd.DataFrame:
+def fetch_focus_annual(indicator: str, base_calculo: int = 0, page: int = 10000,
+                       tries: int = 3) -> pd.DataFrame:
     """All Focus annual medians for one indicator (all respondents)."""
     rows: list[dict] = []
     skip = 0
     while True:
         params = {
-            "$filter": f"Indicador eq '{indicator}' and baseCalculo eq 0",
+            "$filter": f"Indicador eq '{indicator}' and baseCalculo eq {base_calculo}",
             "$select": "Indicador,Data,DataReferencia,Mediana,numeroRespondentes,baseCalculo",
             "$format": "json",
             "$top": str(page),
@@ -203,14 +217,14 @@ def newest_local_raw(prefix: str) -> Path | None:
 
 def load_indicator(prefix: str, offline: bool, audit: list[dict]) -> pd.DataFrame:
     """Return raw annual medians with columns Data, DataReferencia, Mediana."""
-    indicator, zenodo_file = INDICATORS[prefix]
+    indicator, zenodo_file, base_calculo = INDICATORS[prefix]
     source, source_file, note = None, None, ""
     df = None
 
     if not offline:
         try:
-            print(f"Olinda API: {indicator}")
-            df = fetch_focus_annual(indicator)
+            print(f"Olinda API: {indicator} (baseCalculo={base_calculo})")
+            df = fetch_focus_annual(indicator, base_calculo)
             out = RAW_DIR / f"{prefix}_annual_{timestamp_utc()}.csv"
             df.to_csv(out, index=False)  # new timestamped file, never overwrites
             source, source_file = "BCB_OLINDA_API", rel(out)
@@ -224,12 +238,14 @@ def load_indicator(prefix: str, offline: bool, audit: list[dict]) -> pd.DataFram
         if local is not None:
             df = pd.read_csv(local)
             source, source_file = "BCB_OLINDA_API_SAVED", rel(local)
-        elif (ZENODO_RAW_DIR / zenodo_file).exists():
+        elif zenodo_file and (ZENODO_RAW_DIR / zenodo_file).exists():
             df = pd.read_csv(ZENODO_RAW_DIR / zenodo_file)
             source, source_file = "ZENODO_24206681_FROZEN", rel(ZENODO_RAW_DIR / zenodo_file)
         else:
             raise FileNotFoundError(f"No source available for {indicator!r}")
 
+    if "baseCalculo" in df.columns and not (pd.to_numeric(df["baseCalculo"]) == base_calculo).all():
+        raise ValueError(f"{prefix}: raw file mixes baseCalculo values")
     df = df[["Data", "DataReferencia", "Mediana"]].copy()
     df["Data"] = pd.to_datetime(df["Data"])
     df["DataReferencia"] = pd.to_numeric(df["DataReferencia"], errors="coerce")
@@ -248,7 +264,7 @@ def load_indicator(prefix: str, offline: bool, audit: list[dict]) -> pd.DataFram
         "last_survey_date": df["Data"].max().date().isoformat(),
         "publication_lag_days": PUBLICATION_LAG_DAYS,
         "run_timestamp_utc": timestamp_utc(),
-        "notes": note + "Medians, all respondents (baseCalculo=0); % of GDP; "
+        "notes": note + f"Medians, all respondents (baseCalculo={base_calculo}); % of GDP; "
                  "fixed-horizon weights by survey calendar month.",
     })
     return df
@@ -391,7 +407,7 @@ def outlier_table(monthly: pd.DataFrame, dummies: pd.DataFrame) -> pd.DataFrame:
 
 def plot_outputs(monthly: pd.DataFrame) -> None:
     fig, axes = plt.subplots(2, 2, figsize=(11, 7), sharex=True)
-    for j, prefix in enumerate(INDICATORS):
+    for j, prefix in enumerate(MAIN_PREFIXES):
         label = "Exp. net debt (% GDP)" if prefix == "focus_dlsp" else "Exp. primary balance (% GDP)"
         ax = axes[0, j]
         for h in HORIZONS:
@@ -408,11 +424,57 @@ def plot_outputs(monthly: pd.DataFrame) -> None:
     plt.close(fig)
 
 
+def compare_base_calculo(monthly: pd.DataFrame) -> pd.DataFrame:
+    """baseCalculo 0 vs 1 on the common months: levels, revisions, smoothing."""
+    rows = []
+    for var in ("focus_primary", "focus_dlsp"):
+        for h in HORIZONS:
+            r0, r1 = monthly[f"{var}_{h}_rev_curr"], monthly[f"{var}_bc1_{h}_rev_curr"]
+            l0, l1 = monthly[f"{var}_{h}_eom_lag1"], monthly[f"{var}_bc1_{h}_eom_lag1"]
+            j = pd.concat([r0, r1], axis=1, keys=["bc0", "bc1"]).dropna()
+            lv = pd.concat([l0, l1], axis=1).dropna()
+            rows.append({
+                "variable": f"{var}_{h}", "n_common_months": len(j),
+                "first_month": j.index.min().strftime("%Y-%m"), "last_month": j.index.max().strftime("%Y-%m"),
+                "corr_levels_eom": float(lv.corr().iloc[0, 1]),
+                "mean_abs_level_gap": float((lv.iloc[:, 0] - lv.iloc[:, 1]).abs().mean()),
+                "corr_rev_same_month": float(j.corr().iloc[0, 1]),
+                "corr_bc0_t_bc1_tminus1": float(j["bc0"].corr(j["bc1"].shift(1))),
+                "corr_bc0_t_bc1_tplus1": float(j["bc0"].corr(j["bc1"].shift(-1))),
+                "sd_rev_bc0": float(j["bc0"].std()), "sd_rev_bc1": float(j["bc1"].std()),
+                "ar1_rev_bc0": float(j["bc0"].autocorr(1)), "ar1_rev_bc1": float(j["bc1"].autocorr(1)),
+                "share_zero_bc0": float((j["bc0"] == 0).mean()), "share_zero_bc1": float((j["bc1"] == 0).mean()),
+            })
+    return pd.DataFrame(rows)
+
+
+def plot_base_calculo(monthly: pd.DataFrame) -> None:
+    d = monthly.loc["2021-01-01":]
+    fig, axes = plt.subplots(2, 2, figsize=(11, 6.5), sharex=True)
+    for i, var in enumerate(("focus_primary", "focus_dlsp")):
+        for k, h in enumerate(HORIZONS):
+            ax = axes[i, k]
+            ax.plot(d.index, d[f"{var}_{h}_rev_curr"], lw=1.0, color="0.5", label="baseCalculo 0 (30 dias)")
+            ax.plot(d.index, d[f"{var}_bc1_{h}_rev_curr"], lw=1.0, color="C0", label="baseCalculo 1 (4 dias úteis)")
+            ax.axhline(0, color="k", lw=0.5)
+            ax.set_title(f"{var} {h}: revisão no mês t (p.p. do PIB)")
+            ax.legend(fontsize=7)
+    fig.tight_layout()
+    fig.savefig(FIGURES_DIR / "focus_basecalculo_comparison.png", dpi=150)
+    plt.close(fig)
+
+
 # ----------------------------------------------------------------------------
 # main
 # ----------------------------------------------------------------------------
 def main() -> None:
     offline = "--offline" in sys.argv
+    fetch_only: set[str] = set()
+    if "--fetch" in sys.argv:
+        fetch_only = set(sys.argv[sys.argv.index("--fetch") + 1].split(","))
+        unknown = fetch_only - set(INDICATORS)
+        if unknown:
+            raise SystemExit(f"--fetch: unknown prefixes {sorted(unknown)}")
     ensure_directories()
 
     panel_path = find_input_panel()
@@ -424,7 +486,8 @@ def main() -> None:
     audit: list[dict] = []
     daily_parts, monthly_parts = [], []
     for prefix in INDICATORS:
-        raw = load_indicator(prefix, offline, audit)
+        local_only = offline or (bool(fetch_only) and prefix not in fetch_only)
+        raw = load_indicator(prefix, local_only, audit)
         m = fixed_event_matrix(raw)
         daily = daily_fixed_horizon(m, prefix)
         daily_parts.append(daily)
@@ -461,7 +524,9 @@ def main() -> None:
         for n, s in EVENT_DUMMIES.items()
     ]).to_csv(DIAGNOSTICS_DIR / "focus_fiscal_expectations_event_dummies.csv", index=False)
 
-    cols = expectations.columns
+    allcols = expectations.columns
+    cols = [c for c in allcols if "_bc1_" not in c]
+    bc1 = [c for c in allcols if "_bc1_" in c]
     lists = {
         "predetermined_controls_main": [c for c in cols if c.endswith("_eom_lag1")],
         "predetermined_controls_alt_avg": [c for c in cols if c.endswith("_avg_lag1")],
@@ -469,11 +534,21 @@ def main() -> None:
         "purge_contemporaneous_do_not_use_as_controls": [c for c in cols if c.endswith("_rev_curr")],
         "event_dummies_with_rev_curr": list(EVENT_DUMMIES),
         "event_dummies_with_rev_lag1": [f"{n}_lag1" for n in EVENT_DUMMIES],
+        "basecalculo1_predetermined_robustness_2021plus": [c for c in bc1 if not c.endswith("_rev_curr")],
+        "basecalculo1_purge_contemporaneous_2021plus": [c for c in bc1 if c.endswith("_rev_curr")],
+        "notes": [
+            "Main lists use baseCalculo = 0 (30-day window medians), available from 2000.",
+            "*_bc1_* use baseCalculo = 1 (answers from the last 4 business days), available only from "
+            "2021-03-31 (first revision 2021-04) with fewer respondents: robustness only.",
+        ],
     }
     (DIAGNOSTICS_DIR / "fiscal_expectations_control_lists.json").write_text(
         json.dumps(lists, indent=2, ensure_ascii=False), encoding="utf-8")
 
+    comp = compare_base_calculo(expectations)
+    comp.to_csv(DIAGNOSTICS_DIR / "focus_basecalculo_comparison.csv", index=False)
     plot_outputs(expectations)
+    plot_base_calculo(expectations)
     if not outliers.empty:
         print(f"\nRevision outliers (|z| > {OUTLIER_Z}):")
         print(outliers.to_string(index=False))
@@ -483,6 +558,8 @@ def main() -> None:
     if not val.empty:
         print("\nValidation against Zenodo monthly files:")
         print(val[["variable", "n_common_months", "max_abs_diff", "correlation"]].to_string(index=False))
+    print("\nbaseCalculo 0 vs 1 (common months):")
+    print(comp.round(3).to_string(index=False))
 
 
 if __name__ == "__main__":

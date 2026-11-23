@@ -37,3 +37,13 @@ focus_primary_36m_rev_curr,2016-02,-0.875,-6.3,
 focus_primary_36m_rev_curr,2016-07,-0.5,-3.53,
 focus_primary_36m_rev_curr,2020-04,-0.717,-5.13,d_focus_covid_2020m04
 focus_primary_36m_rev_curr,2020-07,-0.501,-3.53,d_focus_covid_2020m07
+focus_dlsp_bc1_12m_rev_lag1,2021-06,-3.084,-3.57,
+focus_dlsp_bc1_12m_rev_curr,2021-05,-3.084,-3.6,
+focus_dlsp_bc1_36m_rev_lag1,2021-06,-6.346,-3.21,
+focus_dlsp_bc1_36m_rev_curr,2021-05,-6.346,-3.24,
+focus_primary_bc1_12m_rev_lag1,2021-07,0.85,4.4,
+focus_primary_bc1_12m_rev_lag1,2023-01,-0.6,-3.43,
+focus_primary_bc1_12m_rev_curr,2021-06,0.85,4.44,
+focus_primary_bc1_12m_rev_curr,2022-12,-0.6,-3.46,
+focus_primary_bc1_36m_rev_lag1,2021-11,-1.042,-3.76,
+focus_primary_bc1_36m_rev_curr,2021-10,-1.042,-3.79,

@@ -38,5 +38,29 @@
     "d_focus_covid_2020m05_lag1",
     "d_focus_covid_2020m06_lag1",
     "d_focus_covid_2020m07_lag1"
+  ],
+  "basecalculo1_predetermined_robustness_2021plus": [
+    "focus_dlsp_bc1_12m_eom_lag1",
+    "focus_dlsp_bc1_12m_avg_lag1",
+    "focus_dlsp_bc1_12m_rev_lag1",
+    "focus_dlsp_bc1_36m_eom_lag1",
+    "focus_dlsp_bc1_36m_avg_lag1",
+    "focus_dlsp_bc1_36m_rev_lag1",
+    "focus_primary_bc1_12m_eom_lag1",
+    "focus_primary_bc1_12m_avg_lag1",
+    "focus_primary_bc1_12m_rev_lag1",
+    "focus_primary_bc1_36m_eom_lag1",
+    "focus_primary_bc1_36m_avg_lag1",
+    "focus_primary_bc1_36m_rev_lag1"
+  ],
+  "basecalculo1_purge_contemporaneous_2021plus": [
+    "focus_dlsp_bc1_12m_rev_curr",
+    "focus_dlsp_bc1_36m_rev_curr",
+    "focus_primary_bc1_12m_rev_curr",
+    "focus_primary_bc1_36m_rev_curr"
+  ],
+  "notes": [
+    "Main lists use baseCalculo = 0 (30-day window medians), available from 2000.",
+    "*_bc1_* use baseCalculo = 1 (answers from the last 4 business days), available only from 2021-03-31 (first revision 2021-04) with fewer respondents: robustness only."
   ]
 }

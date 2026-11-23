@@ -1,0 +1,299 @@
+{
+  "shocks_baseline": [
+    "eps_N_base_fprim",
+    "eps_F_base_fprim",
+    "eps_R_base_fprim"
+  ],
+  "shocks_alternative_deltaF": {
+    "fprim_xev": [
+      "eps_N_base_fprim_xev",
+      "eps_F_base_fprim_xev",
+      "eps_R_base_fprim_xev"
+    ],
+    "fprim_dum": [
+      "eps_N_base_fprim_dum",
+      "eps_F_base_fprim_dum",
+      "eps_R_base_fprim_dum"
+    ],
+    "fprim16": [
+      "eps_N_base_fprim16",
+      "eps_F_base_fprim16",
+      "eps_R_base_fprim16"
+    ],
+    "fprim_bc1": [
+      "eps_N_base_fprim_bc1",
+      "eps_F_base_fprim_bc1",
+      "eps_R_base_fprim_bc1"
+    ],
+    "fprim21": [
+      "eps_N_base_fprim21",
+      "eps_F_base_fprim21",
+      "eps_R_base_fprim21"
+    ],
+    "pprim": [
+      "eps_N_base_pprim",
+      "eps_F_base_pprim",
+      "eps_R_base_pprim"
+    ],
+    "pprim_surp": [
+      "eps_N_base_pprim_surp",
+      "eps_F_base_pprim_surp",
+      "eps_R_base_pprim_surp"
+    ],
+    "fdlsp": [
+      "eps_N_base_fdlsp",
+      "eps_F_base_fdlsp",
+      "eps_R_base_fdlsp"
+    ],
+    "fprim_fdlsp": [
+      "eps_N_base_fprim_fdlsp",
+      "eps_F_base_fprim_fdlsp",
+      "eps_R_base_fprim_fdlsp"
+    ],
+    "cfrisk": [
+      "eps_N_base_cfrisk",
+      "eps_F_base_cfrisk",
+      "eps_R_base_cfrisk"
+    ],
+    "cfrisk_narr": [
+      "eps_N_base_cfrisk_narr",
+      "eps_F_base_cfrisk_narr",
+      "eps_R_base_cfrisk_narr"
+    ],
+    "fprim_cfrisk": [
+      "eps_N_base_fprim_cfrisk",
+      "eps_F_base_fprim_cfrisk",
+      "eps_R_base_fprim_cfrisk"
+    ]
+  },
+  "shocks_alternative_forecasting_spec": [
+    "eps_F_liq_fprim",
+    "eps_F_long_fprim",
+    "eps_F_nolead_fprim",
+    "eps_F_pca_fprim",
+    "eps_F_principal_fprim",
+    "eps_F_stock_fprim",
+    "eps_F_w12_fprim",
+    "eps_N_liq_fprim",
+    "eps_N_long_fprim",
+    "eps_N_nolead_fprim",
+    "eps_N_pca_fprim",
+    "eps_N_principal_fprim",
+    "eps_N_stock_fprim",
+    "eps_N_w12_fprim",
+    "eps_R_liq_fprim",
+    "eps_R_long_fprim",
+    "eps_R_nolead_fprim",
+    "eps_R_pca_fprim",
+    "eps_R_principal_fprim",
+    "eps_R_stock_fprim",
+    "eps_R_w12_fprim",
+    "eps_Ramp_ramp_fprim"
+  ],
+  "deltaF_definitions": {
+    "fprim": {
+      "news": [
+        "focus_primary_12m_rev_curr",
+        "focus_primary_36m_rev_curr"
+      ],
+      "dummies": [],
+      "gamma_without_events": false,
+      "sample_from": null
+    },
+    "fprim_xev": {
+      "news": [
+        "focus_primary_12m_rev_curr",
+        "focus_primary_36m_rev_curr"
+      ],
+      "dummies": [],
+      "gamma_without_events": true,
+      "sample_from": null
+    },
+    "fprim_dum": {
+      "news": [
+        "focus_primary_12m_rev_curr",
+        "focus_primary_36m_rev_curr"
+      ],
+      "dummies": [
+        "d_focus_gdprev_2007m04",
+        "d_focus_covid_2020m03",
+        "d_focus_covid_2020m04",
+        "d_focus_covid_2020m05",
+        "d_focus_covid_2020m06",
+        "d_focus_covid_2020m07"
+      ],
+      "gamma_without_events": false,
+      "sample_from": null
+    },
+    "fprim16": {
+      "news": [
+        "focus_primary_12m_rev_curr",
+        "focus_primary_36m_rev_curr"
+      ],
+      "dummies": [],
+      "gamma_without_events": false,
+      "sample_from": "pprim"
+    },
+    "fprim_bc1": {
+      "news": [
+        "focus_primary_bc1_12m_rev_curr",
+        "focus_primary_bc1_36m_rev_curr"
+      ],
+      "dummies": [],
+      "gamma_without_events": false,
+      "sample_from": null
+    },
+    "fprim21": {
+      "news": [
+        "focus_primary_12m_rev_curr",
+        "focus_primary_36m_rev_curr"
+      ],
+      "dummies": [],
+      "gamma_without_events": false,
+      "sample_from": "fprim_bc1"
+    },
+    "pprim": {
+      "news": [
+        "prisma_primary_12m_rev_curr_pib",
+        "prisma_primary_36m_rev_curr_pib"
+      ],
+      "dummies": [],
+      "gamma_without_events": false,
+      "sample_from": null
+    },
+    "pprim_surp": {
+      "news": [
+        "prisma_primary_12m_rev_curr_pib",
+        "prisma_primary_36m_rev_curr_pib",
+        "prisma_primary_surp_pib_release"
+      ],
+      "dummies": [],
+      "gamma_without_events": false,
+      "sample_from": null
+    },
+    "fdlsp": {
+      "news": [
+        "focus_dlsp_12m_rev_curr",
+        "focus_dlsp_36m_rev_curr"
+      ],
+      "dummies": [],
+      "gamma_without_events": false,
+      "sample_from": null
+    },
+    "fprim_fdlsp": {
+      "news": [
+        "focus_primary_12m_rev_curr",
+        "focus_primary_36m_rev_curr",
+        "focus_dlsp_12m_rev_curr",
+        "focus_dlsp_36m_rev_curr"
+      ],
+      "dummies": [],
+      "gamma_without_events": false,
+      "sample_from": null
+    },
+    "cfrisk": {
+      "news": [
+        "cf_fiscal_risk"
+      ],
+      "dummies": [],
+      "gamma_without_events": false,
+      "sample_from": null
+    },
+    "cfrisk_narr": {
+      "news": [
+        "cf_fiscal_risk_narr"
+      ],
+      "dummies": [],
+      "gamma_without_events": false,
+      "sample_from": null
+    },
+    "fprim_cfrisk": {
+      "news": [
+        "focus_primary_12m_rev_curr",
+        "focus_primary_36m_rev_curr",
+        "cf_fiscal_risk"
+      ],
+      "dummies": [],
+      "gamma_without_events": false,
+      "sample_from": null
+    }
+  },
+  "external_series_added": [
+    "cf_fiscal_risk",
+    "cf_fiscal_risk_narr"
+  ],
+  "samples": {
+    "fprim": [
+      "2006-11",
+      "2025-02",
+      220
+    ],
+    "fprim_xev": [
+      "2006-11",
+      "2025-02",
+      220
+    ],
+    "fprim_dum": [
+      "2006-11",
+      "2025-02",
+      220
+    ],
+    "fprim16": [
+      "2006-11",
+      "2025-02",
+      220
+    ],
+    "fprim_bc1": [
+      "2021-04",
+      "2025-02",
+      47
+    ],
+    "fprim21": [
+      "2006-11",
+      "2025-02",
+      220
+    ],
+    "pprim": [
+      "2016-03",
+      "2025-02",
+      99
+    ],
+    "pprim_surp": [
+      "2016-03",
+      "2025-02",
+      99
+    ],
+    "fdlsp": [
+      "2006-11",
+      "2025-02",
+      220
+    ],
+    "fprim_fdlsp": [
+      "2006-11",
+      "2025-02",
+      220
+    ],
+    "cfrisk": [
+      "2006-11",
+      "2025-02",
+      220
+    ],
+    "cfrisk_narr": [
+      "2006-11",
+      "2025-02",
+      220
+    ],
+    "fprim_cfrisk": [
+      "2006-11",
+      "2025-02",
+      220
+    ]
+  },
+  "notes": [
+    "eps_* are contemporaneous shocks (month t) for the local projections; never controls.",
+    "Signs: Focus/Prisma primary revisions + = good news; DLSP revisions and cf_fiscal_risk + = adverse.",
+    "Units of eps: fraction of lagged 12-month GDP (stock spec: fraction of lagged class stock).",
+    "fprim_dum sets epsilon to zero in 2007-04 and 2020-03..07; fprim_xev keeps those months.",
+    "cf_fiscal_risk(_narr): Carvalho Filho (2026), doi:10.5281/zenodo.24206681, CC-BY-4.0 - cite; full-sample estimate identified with month-t asset prices (robustness only)."
+  ]
+}
