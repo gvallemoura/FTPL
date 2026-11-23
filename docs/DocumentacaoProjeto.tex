@@ -38,9 +38,8 @@ foram construídas, quais códigos existem, quais diagnósticos foram executados
 quais etapas permanecem pendentes. A documentação cobre a base teórica, o texto
 principal do projeto, a estratégia de construção de choques de emissão, o notebook
 de construção de dados e a implementação da Etapa A de controles estruturais
-predeterminados. Também registra a implementação inicial da Etapa B, dedicada às
-curvas de juros da ANBIMA, incluindo seu fallback manual quando a API exige
-credenciais não disponíveis no ambiente local.
+predeterminados. Também registra a Etapa B, dedicada às curvas de juros da ANBIMA,
+hoje alimentada pela ETTJ diária enviada pelo coautor (2006 a janeiro de 2025).
 \end{abstract}
 
 \newpage
@@ -912,9 +911,9 @@ O painel selecionado automaticamente foi:
 \path{data/clean/ftpl_monthly_panel_structural_controls.csv}.
 \end{center}
 
-Ele contém 559 observações mensais, de dezembro de 1979 a junho de 2026, e 192
-colunas. A integração da Etapa B produziu um painel derivado com 559 observações e
-264 colunas em:
+Ele contém 564 observações mensais, de dezembro de 1979 a novembro de 2026, e 192
+colunas. A integração da Etapa B produz um painel derivado com 564 observações e
+300 colunas em:
 \begin{center}
 \path{data/clean/ftpl_monthly_panel_with_yield_curve_controls.csv}.
 \end{center}
@@ -931,13 +930,14 @@ hardcoded, por meio de variáveis de ambiente como
 \url{https://developers.anbima.com.br/pt/documentacao/precos-indices/apis-de-precos/titulos-publicos/}
 \end{center}
 
-Na execução local documentada, não havia credenciais nem
-\path{ANBIMA_API_BASE} configurado. Por isso, a API não foi chamada e nenhum
-valor de curva foi inventado. Também não havia arquivos históricos ANBIMA locais
-compatíveis com o parser. O fato foi registrado em
+Na primeira execução não havia credenciais nem \path{ANBIMA_API_BASE}
+configurado. A API não foi chamada, nenhum valor de curva foi inventado e as
+colunas de curva ficaram vazias. A fonte efetivamente usada hoje é a ETTJ ANBIMA
+enviada pelo coautor (subseção~\ref{sec:ettj}), lida pelo script como arquivo local
+em \path{data/raw/anbima/}. A tentativa de API continua registrada em
 \path{data/diagnostics/anbima_yield_curve_audit.csv}.
 
-Como fallback, foi criado o template:
+Como fallback adicional, foi criado o template:
 \begin{center}
 \path{data/raw/anbima/anbima_yield_curve_manual_template.csv}.
 \end{center}
@@ -964,10 +964,10 @@ As bases produzidas são:
     \item \path{data/intermediate/anbima/anbima_yield_curve_pca_factors_monthly.csv}.
 \end{itemize}
 
-Como não houve dados de origem na execução, as bases diárias ficaram sem
-observações, enquanto a base mensal foi criada com 559 meses e colunas preenchidas
-com \path{NaN}. Isso permite que o restante do painel seja usado sem misturar
-valores fictícios com os controles observados.
+Com a ETTJ, as bases diárias cobrem de 02/01/2006 a 31/01/2025 (4.786 dias úteis).
+Os vértices-alvo coincidem com vértices da ETTJ, de modo que não foi necessária
+nenhuma interpolação. Os meses sem curva continuam com \path{NaN}, sem valores
+fictícios.
 
 \subsection{Variáveis e predeterminação}
 
@@ -1010,23 +1010,89 @@ Foram preparados os arquivos:
     \item \path{data/diagnostics/yield_curve_control_lists.json}.
 \end{itemize}
 
-Na execução atual, as listas baseline e estendida contêm os nomes das variáveis
-esperadas no painel, mas todos os seus valores são \path{NaN}. A lista de PCA não
-contém componentes observados porque não houve dados completos para estimação.
+Na execução atual, as 72 variáveis de curva estão preenchidas de 2006-02 a 2025-02
+(229 meses) e a lista de PCA contém 36 colunas (três componentes por bloco e por
+agregação). Na amostra completa, o primeiro componente explica 96,7\% da variância
+no bloco prefixado, 96,6\% no IPCA e 92,3\% na inflação implícita (versão
+\path{_eom_lag1}). Os componentes e as medidas de nível, inclinação e curvatura usam
+apenas vértices de 1 ano em diante.
 
-\subsection{Teste executado e resultado}
+\subsection{ETTJ ANBIMA enviada pelo coautor}\label{sec:ettj}
 
-O comando \path{python3 src/build_anbima_yield_curve_controls.py} foi executado com
-sucesso. O script confirmou o painel de entrada, criou as bases intermediárias,
-integrou as colunas de curva ao painel derivado e produziu os arquivos de auditoria.
-A compilação sintática também foi verificada com
-\path{PYTHONPYCACHEPREFIX=data/.pycache python3 -m py_compile
-build_anbima_yield_curve_controls.py}.
+Em 22/11/2026 o coautor enviou \path{DadosJoao/data/data_yields.xlsx}, com a ETTJ
+ANBIMA diária (curvas prefixada e real IPCA, inflação implícita e parâmetros de
+Svensson), de 02/01/2006 a 31/01/2025, preparada para outro projeto. O arquivo
+original da ANBIMA não será enviado, e o coautor vai estender a série para antes de
+2006 e depois de janeiro de 2025.
 
-O próximo passo da Etapa B é obter acesso autenticado à API ANBIMA, ou preencher o
-template manual com arquivos oficiais. Depois disso, o script deve ser reexecutado
-e os diagnósticos de interpolação, cobertura, PCA e predeterminação devem ser
-revisados antes da estimação das equações de emissão.
+A integração foi feita pelo novo script \path{src/import_anbima_ettj.py}:
+\begin{enumerate}[leftmargin=1.2cm]
+    \item a planilha é guardada intocada em
+    \path{data/raw/anbima/original/data_yields__sha256_ebf1e33b96a6.xlsx}. O nome
+    inclui o início do SHA-256; uma cópia idêntica é reaproveitada e uma versão
+    diferente com o mesmo nome interrompe a execução, de modo que a extensão futura
+    entra ao lado sem sobrescrever nada;
+    \item o script lê apenas a cópia guardada. As 258 datas gravadas como texto
+    (DD/MM/AAAA) são lidas com o dia primeiro;
+    \item as curvas prefixada e IPCA são gravadas no formato do projeto (\path{date},
+    \path{curve_type}, \path{vertex_du}, \path{yield_pct},
+    \path{source_document}, \path{notes}), com taxas em \%, em
+    \path{data/raw/anbima/anbima_ettj_daily_long.csv} (76.576 linhas). A inflação
+    implícita não é gravada, porque a Etapa B a recalcula como \(PRE - IPCA\);
+    \item os parâmetros diários de Svensson vão para
+    \path{data/intermediate/anbima/anbima_ettj_svensson_params_daily.csv}.
+\end{enumerate}
+
+A validação, em \path{data/diagnostics/anbima_ettj_import_validation.csv},
+interrompe o script em caso de falha. Todos os itens passaram: datas idênticas nas
+quatro abas, estritamente crescentes e sem fins de semana; nenhum valor ausente; a
+inflação implícita entregue é exatamente nominal menos real; as taxas coincidem com
+a curva de Svensson reconstruída dos parâmetros, com \(t = du/252\) (erro máximo de
+\(4\times10^{-15}\)); e o vértice de 1 ano difere, em média, 0,026 ponto percentual
+da taxa ANBIMA da LTN de 1 ano (correlação de 0,9999 em 229 meses). O arquivo
+\path{fatores_curva_juros.xlsx} da entrega anterior corresponde às linhas de fim de
+mês desta série.
+
+\subsection{Correções na Etapa B}
+
+Duas falhas foram corrigidas antes da execução com dados reais:
+\begin{itemize}[leftmargin=1.2cm]
+    \item a leitura de datas aplicava a regra de dia primeiro a toda data em texto, o
+    que transformava ``2006-01-02'' em 1\textsuperscript{o} de fevereiro e deixava
+    vazias as datas com dia acima de 12. Agora as datas ISO são lidas primeiro e
+    as demais com dia primeiro;
+    \item a busca de arquivos locais varria todo o repositório e encontrava cópias
+    antigas em \path{backups/} e os arquivos de \path{DadosJoao/}. Agora ela se
+    restringe a \path{data/raw/anbima/} e \path{data/anbima/} e ignora
+    \path{data/raw/anbima/original/}.
+\end{itemize}
+
+\subsection{Execução e resultado}
+
+Após a importação, foram executados \path{src/build_anbima_yield_curve_controls.py}
+e, em seguida, os estágios seguintes, em modo offline quando disponível:
+expectativas Focus, notícia fiscal Prisma, variáveis de valuation e estoque desde
+2000 (emenda com status PASS). A predeterminação foi conferida contra o dado bruto:
+\path{pre_1y_eom_lag1} de fevereiro de 2006 é igual ao valor de 31/01/2006, e
+\path{pre_1y_avg_lag1} é igual à média de janeiro.
+
+Na comparação com a versão anterior, as únicas mudanças nos painéis derivados são
+as 72 colunas de curva, antes vazias, e as 36 colunas novas de PCA. As dimensões
+passaram a ser: curva 564\(\times\)300, expectativas 564\(\times\)328, notícia fiscal
+564\(\times\)368, valuation 564\(\times\)386 e estoque 564\(\times\)436.
+
+Ressalvas:
+\begin{itemize}[leftmargin=1.2cm]
+    \item os vértices de 3 e 6 meses da curva real não são confiáveis: entre 2013 e
+    2021, sem NTN-B curta, eles resultam da extrapolação da curva, com 172 valores
+    fora do intervalo de \(-3\%\) a \(20\%\). As variáveis \path{ipca_3m},
+    \path{ipca_6m}, \path{bei_3m} e \path{bei_6m} não devem ser usadas, e o
+    importador marca esses vértices em \path{notes};
+    \item a amostra base começa em 2005, mas os controles de curva só existem a
+    partir de 2006-02, até que chegue a extensão do coautor. Quando ela chegar,
+    basta executar \path{python3 src/import_anbima_ettj.py --source <arquivo>} e
+    repetir a cadeia a partir da Etapa B.
+\end{itemize}
 
 \section{Correção da leitura de séries do SGS e reexecução do pipeline}
 
@@ -1216,8 +1282,10 @@ mesma definição do painel; \path{share_{g}_hist_mkt}, sobre o total em mercado
 \path{coverage_NFR_over_market}; e as versões predeterminadas
 \path{share_*_hist_lag1}, \path{share_*_hist_mkt_lag1}, \path{stock_*_hist_pib_lag1}
 e \path{gross_{g}_over_lag_stock_hist}. O painel resultante,
-\path{data/clean/ftpl_monthly_panel_with_stock_history.csv}, com 564 linhas e 399
-colunas (incluindo as 18 colunas do bloco real ampliado descrito abaixo), passa a ser
+\path{data/clean/ftpl_monthly_panel_with_stock_history.csv}, com 564 linhas e 436
+colunas (incluindo \path{month}, as 18 colunas do bloco real ampliado descrito abaixo
+e as 36 colunas de PCA da curva de juros; antes da ETTJ eram 400, e não 399, como
+constava por erro de contagem), passa a ser
 o mais completo do projeto.
 
 No início da amostra, \(N+F+R\) cobre só parte da dívida em mercado: 75\% em
@@ -1298,7 +1366,8 @@ A pasta \path{DadosJoao/data/} foi auditada em 22/11/2026. Os pontos relevantes 
     nem a inflação implícita, e o arquivo não atende aos requisitos da Etapa B. Foram
     pedidos ao coautor os yields diários da curva zero-cupom da ANBIMA (prefixada,
     IPCA e inflação implícita), do início de cada série, no mínimo desde
-    dezembro de 2009, até a data mais recente;
+    dezembro de 2009, até a data mais recente. Eles chegaram em seguida, em
+    \path{data_yields.xlsx} (subseção~\ref{sec:ettj});
     \item \path{CDS_Brasil.xlsx} traz CDS de 5 e 2 anos de 2008-01 a 2026-06, sem fonte
     declarada e com meses de 2008 repetidos; fica apenas para robustez e não foi
     integrado;
@@ -1343,7 +1412,9 @@ econométrica dos choques de emissão.
     \item estoque e participações por classe estendidos para 2000-02 a 2026-09 com
     séries do SGS, emendadas e validadas contra o eDPF;
     \item bloco real ampliado (NTN-B + NTN-C), com emissão, estoque e participações,
-    para análise de robustez com amostra a partir de 2001.
+    para análise de robustez com amostra a partir de 2001;
+    \item ETTJ ANBIMA diária de 2006 a janeiro de 2025 importada e validada, com
+    controles de curva e PCA preenchidos de 2006-02 a 2025-02.
 \end{itemize}
 
 \subsection{Ainda pendente}
@@ -1359,10 +1430,9 @@ econométrica dos choques de emissão.
     diante usada na base do coautor;
     \item estimar equações de previsão de emissão por \(N\), \(F\) e \(R\);
     \item obter resíduos de emissão e choques survey-purged;
-    \item obter dados autenticados da ANBIMA ou preencher o template manual e
-    validar os fatores de curva de juros, yields reais e inflação implícita;
-    \item obter a curva completa para inflação implícita em vários prazos (pedidos ao
-    coautor os yields diários da ANBIMA);
+    \item importar a extensão da ETTJ prometida pelo coautor (antes de 2006 e depois
+    de janeiro de 2025) e repetir a cadeia a partir da Etapa B;
+    \item construir variáveis de resultado de inflação implícita;
     \item implementar projeções locais;
     \item testar formalmente as restrições \(N > R\) e \(N > F > R\);
     \item construir validação narrativa e exercícios de robustez.

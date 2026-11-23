@@ -21,7 +21,11 @@ a partir do pacote Zenodo de Carvalho Filho (2026) (`build_valuation_outcomes.py
 (iv) auditada a segunda entrega do João (`DadosJoao/data/`) e estendidos o estoque
 e as participações por classe para 2000-02–2026-09 com séries do SGS, emendadas ao
 eDPF (`build_stock_history_sgs.py`). Os fatores de curva entregues (β de Svensson
-sem λ) não substituem a curva ANBIMA; as curvas completas continuam pendentes.
+sem λ) não substituem a curva ANBIMA; (v) integradas as curvas diárias da ETTJ
+ANBIMA (prefixada, IPCA e inflação implícita, 2006-01-02 a 2025-01-31) enviadas
+pelo João (`import_anbima_ettj.py` → `build_anbima_yield_curve_controls.py`), com a
+Etapa B e todos os estágios seguintes reexecutados. A extensão da série para antes
+de 2006 e depois de jan/2025 foi pedida ao João e chegará em alguns dias.
 
 ## Research Objective
 
@@ -163,11 +167,91 @@ JSON/Parquet files, or a manual template. It standardizes daily curves, interpol
 target vertices without extrapolation, creates monthly `_eom_lag1` and `_avg_lag1`
 controls, prepares PCA factors, and merges the result into a new panel.
 
-The last documented run found no configured ANBIMA credentials and no usable local
-curve file. It therefore created empty but correctly structured curve outputs and
-documented the fallback in the audit file. This is an implementation state, not
-evidence that the ANBIMA series are economically missing; rerun the script before
-assuming that the access situation is unchanged.
+Status (22/11/2026): populated with the ANBIMA ETTJ imported by
+`import_anbima_ettj.py` (still no API credentials; the API path is skipped and the
+local file is used). All 72 curve variables (`pre_*`, `ipca_*`, `bei_*` at the
+eight vertices plus level/slope/curvature, each `_eom_lag1` and `_avg_lag1`) have
+data for 2006-02 to 2025-02 (229 months), and the PCA blocks now exist (36 new
+columns: `{pre,ipca,bei}_pc{1,2,3}_{eom,avg}_lag1` and `_expanding` versions; the
+expanding ones start after `MIN_PCA_WINDOW = 60` months). Full-sample first
+components explain 97% (PRE), 97% (IPCA) and 92% (BEI) of the variance. Checks:
+`pre_1y_eom_lag1` in 2006-02 equals the raw 2006-01-31 value and `_avg_lag1` the
+January mean; no vertex was interpolated (the ETTJ already has the target
+vertices); BEI = PRE − IPCA equals the delivered BEIR exactly. Panel:
+`ftpl_monthly_panel_with_yield_curve_controls.csv`, 564 × 300.
+
+Two bugs were fixed on 22/11/2026 before the run:
+
+- `parse_date_series` applied `dayfirst=True` to every string, so an ISO date
+  "2006-01-02" became 1 Feb 2006 and ISO dates with day > 12 became NaT. ISO
+  dates are now parsed as ISO and other strings day-first.
+- `find_local_curve_files` scanned the whole repository for names containing
+  "anbima/curva/yield/juros", which picked up `backups/` copies of earlier outputs
+  (whose long files have the parser's exact columns) and the raw files in
+  `DadosJoao/`. The search is now restricted to `data/raw/anbima/` (and the
+  legacy `data/anbima/`), skipping `data/raw/anbima/original/`.
+
+Caveat for users: `ipca_3m`, `ipca_6m`, `bei_3m` and `bei_6m` are unreliable. In
+2013–2021 there were often no short NTN-B, so the fitted real curve is
+extrapolated at the short end (real 3m up to 64.6%, BEI 3m down to −50%). Use real
+and BEI vertices from 1y on; the PCA blocks and the level/slope/curvature features
+already use only 1y–10y (and 5y–1y slopes).
+
+### `import_anbima_ettj.py`
+
+Imports an ANBIMA ETTJ workbook into the Etapa B input format. Run before
+`build_anbima_yield_curve_controls.py`:
+`python3 src/import_anbima_ettj.py [--source PATH]` (default
+`DadosJoao/data/data_yields.xlsx`).
+
+- Source: daily ANBIMA zero-coupon curves (ETTJ) exported by coauthor João for
+  another project, delivered 22/11/2026. João confirmed the source is the ANBIMA
+  ETTJ; the original ANBIMA files will not be delivered. Sheets `yields_nominal`,
+  `yields_real`, `BEIR` (vertices 63, 126, 252, 504, 756, 1260, 1764 and 2520
+  business days, rates in decimals) and `fatores` (daily Svensson β1–β4, λ1, λ2
+  for the nominal and real curves). Coverage 2006-01-02 to 2025-01-31, 4,786
+  business days, no gaps or missing values. João will extend the series in both
+  directions.
+- Preservation: the workbook is copied untouched to
+  `data/raw/anbima/original/data_yields__sha256_ebf1e33b96a6.xlsx` (name carries
+  the first 12 hex of its SHA-256; an identical file is reused, a different file
+  with the same name gets a new name, nothing is overwritten). Only that copy is
+  read. `DadosJoao/` stays git-ignored.
+- Date trap: 258 date cells (2023-04-10 to 2024-05-27) are text `DD/MM/YYYY`,
+  the rest are Excel dates. Read month-first, they produce duplicates, weekend
+  dates and out-of-order months; they are parsed day-first.
+- Validation (`data/diagnostics/anbima_ettj_import_validation.csv`; the script
+  stops on any failure): identical dates in all sheets, strictly increasing, no
+  weekends, max gap 5 calendar days, no missing values; BEIR equals nominal −
+  real exactly (simple difference, as in the project spec, not Fisher); the
+  yields equal the Svensson curve of the delivered parameters with t = du/252
+  (max error 0); the 1y nominal vertex matches the ANBIMA 1y LTN rate from
+  Ipeadata (Zenodo package) with mean absolute gap 0.026 pp and correlation
+  0.9999 over 229 months. Real 5y/10y also match the Tesouro Direto constant-
+  maturity real yields (corr. 0.998/0.999, mean |gap| < 0.1 pp; checked during
+  the audit, not in the script).
+- Output for Etapa B: `data/raw/anbima/anbima_ettj_daily_long.csv` (76,576 rows;
+  `date` ISO, `curve_type` PRE/IPCA, `vertex_du`, `yield_pct` in % p.a.,
+  `source_document` = preserved file name, `notes` = `ettj` or
+  `ettj_real_short_unreliable` for IPCA 3m/6m). It is a derived file, rebuilt on
+  each import. BEI is not written because Etapa B computes it as PRE − IPCA.
+- Other outputs: `data/intermediate/anbima/anbima_ettj_svensson_params_daily.csv`
+  (daily parameters, usable to evaluate any maturity) and
+  `data/diagnostics/anbima_ettj_import_audit.csv` (source, preserved copy,
+  SHA-256, coverage, meaning of the `notes` codes).
+- When the extended series arrives: run the importer with `--source` on the new
+  file, then the chain below.
+
+### Stage order (22/11/2026)
+
+`ftpl_build_data_notebook.ipynb` → `build_structural_controls.py` →
+`import_anbima_ettj.py` → `build_anbima_yield_curve_controls.py` →
+`build_fiscal_expectations_controls.py [--offline]` →
+`build_prisma_fiscal_news.py [--offline]` → `build_valuation_outcomes.py` →
+`build_stock_history_sgs.py [--offline]`. On 22/11/2026 the chain was rerun from
+`import_anbima_ettj.py` on, with `--offline` (no new Focus or SGS pulls). Against
+the previous commit, every downstream panel gained the 36 PCA columns and changed
+only in the 72 curve columns (previously empty); no other column changed.
 
 ### `build_fiscal_expectations_controls.py`
 
@@ -303,8 +387,9 @@ saved pulls.
   `share_Ramp_hist_mkt`, their `_lag1`, `stock_Ramp_hist_pib_lag1`,
   `gross_Ramp_over_lag_stock_hist`, ...), listed under
   `robustness_broad_real_block_Ramp` in the lists JSON. It gives R-block issuance
-  from 2001 instead of 2005; the baseline R stays NTN-B only. The panel now has
-  564 × 399 columns.
+  from 2001 instead of 2005; the baseline R stays NTN-B only. The panel has
+  564 × 436 columns after the ETTJ integration (400 before; the earlier "399"
+  excluded `month`).
 - João's `DadosJoao/data/clean/stock_by_group_bcb_sgs.csv` must not be used. Its
   raw SGS values are identical to ours, but it infers NTN-F from the percentage
   series 4177/4178 (`% pre × LFT / % Selic − LTN`), which gives negative NTN-F in
@@ -313,8 +398,12 @@ saved pulls.
 
 #### Other files in `DadosJoao/data/` (audited 22/11/2026)
 
+- `data_yields.xlsx` (delivered later the same day): daily ANBIMA ETTJ yields
+  and Svensson parameters, 2006-01 to 2025-01; integrated via
+  `import_anbima_ettj.py` (see above). It supersedes the item below.
 - `fatores_curva_juros.xlsx`: monthly end-of-month Svensson β1–β4, nominal and
-  real, 2010-01 to 2025-12, with no λ1/λ2. Without the λ the vertices and
+  real, 2010-01 to 2025-12, with no λ1/λ2 (these are the month-end rows of
+  `data_yields.xlsx`). Without the λ the vertices and
   break-even cannot be rebuilt; the real-curve βs take extreme offsetting values.
   It does not meet `ANBIMA_data_requirements.md`. João was asked for the daily
   ANBIMA zero-coupon yields (PRE, IPCA, implied inflation) from the start of
@@ -359,11 +448,12 @@ requirements, output files, audit fields, validation criteria, and the current
 no-data status.
 
 The script remains the executable specification, while this Markdown file is
-the human-readable data dictionary and acceptance checklist. The current
-implementation does not contain substantive ANBIMA observations: credentials
-were unavailable and no usable local history was found in the last documented
-run. The manual template and empty structured outputs are therefore deliberate
-fallback products, not evidence that the ANBIMA series are economically absent.
+the human-readable data dictionary and acceptance checklist. Since 22/11/2026 the
+stage is populated from the ANBIMA ETTJ delivered by João (local-file path; API
+credentials are still unavailable). Departures from the spec: coverage is
+2006-01-02 to 2025-01-31 instead of the full history (extension requested), the
+original ANBIMA file is not available (the coauthor's export is preserved
+instead), and the short real vertices are unreliable.
 
 ### Auxiliary notebooks and R code
 
@@ -389,6 +479,7 @@ earlier or auxiliary R script and is not part of the active Python pipeline.
 ├── src/
 │   ├── build_structural_controls.py
 │   ├── fill_manual_templates_official_sources.py
+│   ├── import_anbima_ettj.py
 │   ├── build_anbima_yield_curve_controls.py
 │   ├── build_fiscal_expectations_controls.py
 │   ├── build_prisma_fiscal_news.py
@@ -483,8 +574,12 @@ stages. The active manual inputs are:
 - `paf_manual_targets.csv`, with backup `paf_manual_targets_backup_20260630.csv`;
 - `treasury_liquidity_reserve_manual.csv`, with backup
   `treasury_liquidity_reserve_manual_backup_20260630.csv`;
-- `anbima/anbima_yield_curve_manual_template.csv`, empty in the last documented
-  run because API credentials and local historical curve files were unavailable;
+- `anbima/anbima_yield_curve_manual_template.csv`, still empty (not needed while
+  the ETTJ file is available);
+- `anbima/original/data_yields__sha256_ebf1e33b96a6.xlsx`, the coauthor's ANBIMA
+  ETTJ workbook, preserved untouched, and `anbima/anbima_ettj_daily_long.csv`, its
+  conversion to the Etapa B long format (derived, rebuilt by
+  `import_anbima_ettj.py`);
 - `anbima/README_anbima_manual_template.txt`, short instructions for manual
   curve entry;
 - `paf_sources/` and `liquidity_sources/`, containing downloaded official Treasury
@@ -496,15 +591,16 @@ The principal current panels are:
 
 - `ftpl_monthly_panel_structural_controls.csv`: Etapa A panel with 564 monthly
   observations (1979-12 to 2026-11) and 192 columns;
-- `ftpl_monthly_panel_with_yield_curve_controls.csv`: derived panel with 564
-  observations and 264 columns. It contains the Etapa B curve columns, currently
-  missing because no ANBIMA curve observations were available;
-- `ftpl_monthly_panel_with_fiscal_expectations.csv`: 564 × 292 (Focus);
-- `ftpl_monthly_panel_with_fiscal_news.csv`: 564 × 332 (Prisma/Focus news);
-- `ftpl_monthly_panel_with_valuation_outcomes.csv`: 564 × 350 (adds sovereign
+- `ftpl_monthly_panel_with_yield_curve_controls.csv`: 564 × 300, Etapa B curve
+  controls and PCA factors from the ANBIMA ETTJ, with data for 2006-02 to 2025-02;
+- `ftpl_monthly_panel_with_fiscal_expectations.csv`: 564 × 328 (Focus);
+- `ftpl_monthly_panel_with_fiscal_news.csv`: 564 × 368 (Prisma/Focus news);
+- `ftpl_monthly_panel_with_valuation_outcomes.csv`: 564 × 386 (adds sovereign
   spread and yields);
-- `ftpl_monthly_panel_with_stock_history.csv`: 564 × 399, the latest and most
+- `ftpl_monthly_panel_with_stock_history.csv`: 564 × 436, the latest and most
   complete panel (adds stock and shares by class from 2000-02, `*_hist`).
+
+Column counts include `month`.
 
 Issuance and auction files still end in 2026-06 and eDPF stocks in 2026-04 because
 the raw Treasury files were not re-downloaded in the 22/11/2026 rerun; the
@@ -513,9 +609,9 @@ the raw Treasury files were not re-downloaded in the 22/11/2026 rerun; the
 ### `data/intermediate/anbima/`
 
 Contains the canonical daily-long, daily-wide, daily-feature, monthly-feature,
-and PCA-factor files generated by the Etapa B script. Empty daily files are valid
-outputs under the current no-data fallback and should not be interpreted as
-successfully downloaded ANBIMA history.
+and PCA-factor files generated by the Etapa B script, now populated with the
+ANBIMA ETTJ for 2006-01-02 to 2025-01-31, plus
+`anbima_ettj_svensson_params_daily.csv` written by `import_anbima_ettj.py`.
 
 The exact input schema, target vertices, transformations, and validation rules
 for these files are documented in `docs/ANBIMA_data_requirements.md`.
@@ -524,8 +620,9 @@ for these files are documented in `docs/ANBIMA_data_requirements.md`.
 
 These contain separate audit and diagnostic products for the PAF/liquidity work,
 Etapa A structural controls, and Etapa B yield curves. In particular,
-`anbima_yield_curve_audit.csv` records the unavailable API configuration and the
-manual-template fallback from the last documented run, while
+`anbima_ettj_import_audit.csv` and `anbima_ettj_import_validation.csv` document
+the ETTJ import, `anbima_yield_curve_audit.csv` records the skipped API path and
+one row per date and curve read from the local file, while
 `yield_curve_control_lists.json` records which curve-control names exist in the
 panel.
 
@@ -548,8 +645,9 @@ Completed or substantially implemented:
   fallback for ANBIMA curves;
 - consolidated ANBIMA data dictionary and acceptance checklist in
   `docs/ANBIMA_data_requirements.md`;
-- derived structural and yield-curve panels; in the last documented run, the
-  yield-curve variables were all `NaN` because no source observations were loaded;
+- derived structural and yield-curve panels; the yield-curve controls and PCA
+  factors are populated from the ANBIMA ETTJ for 2006-02 to 2025-02
+  (`import_anbima_ettj.py`);
 - diagnostic and motivation figures for the available data stages.
 
 - Focus fiscal expectations (`build_fiscal_expectations_controls.py`) and Prisma
@@ -568,17 +666,18 @@ Not yet implemented or not yet populated:
 - raw Prisma spreadsheets and Focus pulls behind João's dataset;
 - issuance forecasting equations and residual innovations \(u_t^j\);
 - survey-purged issuance shocks \(\varepsilon_t^j\);
-- authenticated ANBIMA history or audited manual curve data;
-- PCA factors with actual curve observations;
-- full-curve breakeven outcomes (needs ANBIMA curves or the Tesouro Direto
-  fallback in `ANBIMA_data_requirements.md` §16);
+- ETTJ extension before 2006-01 and after 2025-01 (requested from João; the
+  2005 baseline start currently has no curve controls for 2005-01 to 2006-01);
+- break-even outcome variables for the local projections (the daily BEI curve is
+  now available in `data/intermediate/anbima/`, but no monthly outcome version
+  has been built yet);
 - local projection estimation and formal ranking tests;
 - narrative event database and pension-fund regulatory IV robustness.
 
 Recommended order of work:
 
-1. Obtain and preserve authenticated ANBIMA curve data, or fill the manual template
-   with official files; rerun Etapa B and audit coverage/interpolation.
+1. Import João's extended ETTJ (`import_anbima_ettj.py --source ...`) and rerun
+   the chain from Etapa B on; audit coverage.
 2. Replace the maturity proxy with predetermined financial redemption values when
    security-level coupons, indexation, and quantities are available.
 3. Choose the baseline \(\Delta\mathcal{F}_t^P\) from the Focus and Prisma series
@@ -601,10 +700,9 @@ Recommended order of work:
 - The PAF targets cover 2003--2026, while the liquidity-reserve series covers
   2015-01--2026-05. Their shorter coverage is expected and should not be filled by
   interpolation outside the official source period.
-- The ANBIMA Etapa B output is structurally complete but substantively empty in the
-  current run. `ftpl_monthly_panel_with_yield_curve_controls.csv` should therefore
-  not be used as an econometric input for yield-curve controls until the audit file
-  shows actual observations.
+- The ANBIMA Etapa B output is populated for 2006-02 to 2025-02 only. Until the
+  extension arrives, any estimate using curve controls is restricted to that
+  window, and the short real/BEI vertices (3m, 6m) should not be used.
 - The root-level `.aux`, `.log`, `.out`, `.toc`, `.bbl`, `.blg`, and `.synctex.gz`
   files are build products. They are useful locally but should generally be ignored
   by Git unless a reproducibility workflow explicitly requires them.

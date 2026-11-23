@@ -214,10 +214,21 @@ def parse_numeric_series(series: pd.Series) -> pd.Series:
 
 
 def parse_date_series(series: pd.Series) -> pd.Series:
-    """Parse dates with day-first support."""
-    parsed = pd.to_datetime(series, errors="coerce", dayfirst=True)
-    if parsed.notna().sum() == 0:
-        parsed = pd.to_datetime(series, errors="coerce")
+    """Parse dates: ISO (YYYY-MM-DD) first, otherwise day-first (DD/MM/YYYY).
+
+    Fixed 22/11/2026: the previous version applied ``dayfirst=True`` to every
+    string, which turns ISO "2006-01-02" into 1 Feb 2006 and ISO dates with
+    day > 12 into NaT.
+    """
+    if pd.api.types.is_datetime64_any_dtype(series):
+        return pd.to_datetime(series).dt.normalize()
+    text = series.astype(str).str.strip()
+    iso = text.str.match(r"^\d{4}-\d{2}-\d{2}")
+    parsed = pd.Series(pd.NaT, index=series.index, dtype="datetime64[ns]")
+    if iso.any():
+        parsed[iso] = pd.to_datetime(text[iso].str[:10], format="%Y-%m-%d", errors="coerce")
+    if (~iso).any():
+        parsed[~iso] = pd.to_datetime(text[~iso], errors="coerce", dayfirst=True)
     return parsed.dt.normalize()
 
 
@@ -370,8 +381,15 @@ def fetch_from_anbima_api() -> SourceResult:
 
 
 def find_local_curve_files() -> list[Path]:
-    """Find local files that might contain ANBIMA yield curves."""
-    search_roots = [RAW_DIR, PROJECT_ROOT / "data" / "anbima", PROJECT_ROOT]
+    """Find local files that might contain ANBIMA yield curves.
+
+    Restricted 22/11/2026 to ``data/raw/anbima/`` (and the legacy ``data/anbima/``):
+    the previous version also scanned the whole repository, which picked up
+    ``backups/`` copies of earlier outputs and the coauthor's ``DadosJoao/``
+    files. Preserved original deliveries in ``data/raw/anbima/original/`` are
+    skipped; they are converted by ``src/import_anbima_ettj.py``.
+    """
+    search_roots = [RAW_DIR, PROJECT_ROOT / "data" / "anbima"]
     extensions = {".csv", ".txt", ".xlsx", ".xls", ".json", ".parquet"}
     excluded_dirs = {
         INTERMEDIATE_DIR.resolve(),
@@ -392,6 +410,8 @@ def find_local_curve_files() -> list[Path]:
                     continue
             except OSError:
                 pass
+            if (RAW_DIR / "original") in path.parents:
+                continue
             lower = str(path).lower()
             if path.name == "anbima_yield_curve_manual_template.csv":
                 files.append(path)

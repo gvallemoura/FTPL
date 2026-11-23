@@ -1,0 +1,12 @@
+check,value,status,note
+text dates parsed day-first (per sheet),"{'yields_nominal': 258, 'yields_real': 258, 'BEIR': 258}",PASS,Excel dates elsewhere; text cells are DD/MM/YYYY
+identical dates in all sheets,True,PASS,
+dates strictly increasing,True,PASS,
+weekend dates,0,PASS,
+max calendar gap between observations (days),5,PASS,holidays/Carnival give 4-5
+"missing values in PRE, IPCA and parameters",0,PASS,
+max |BEIR - (nominal - real)|,0.0,PASS,"delivered BEIR is the simple difference, as in the project spec"
+max |Svensson(params) - pre yields| (t = du/252),7.771561172376096e-16,PASS,
+max |Svensson(params) - ipca yields| (t = du/252),4.440892098500626e-15,PASS,
+"real 3m/6m values outside [-3%, 20%]",172,PASS,flagged in notes; use real and BEI vertices from 1y on
+mean |PRE 1y monthly mean - ANBIMA LTN 1y (Ipeadata)| (pp),0.0256,PASS,"n=229, corr=0.9999"

@@ -34,9 +34,7 @@
     "bei_slope_10y_2y_avg_lag1",
     "bei_curvature_1y_5y_10y_avg_lag1"
   ],
-  "yield_curve_controls_pca": [],
-  "missing_from_base_candidates": [],
-  "missing_from_pca_candidates": [
+  "yield_curve_controls_pca": [
     "pre_pc1_eom_lag1",
     "pre_pc2_eom_lag1",
     "pre_pc3_eom_lag1",
@@ -55,5 +53,7 @@
     "bei_pc1_avg_lag1",
     "bei_pc2_avg_lag1",
     "bei_pc3_avg_lag1"
-  ]
+  ],
+  "missing_from_base_candidates": [],
+  "missing_from_pca_candidates": []
 }

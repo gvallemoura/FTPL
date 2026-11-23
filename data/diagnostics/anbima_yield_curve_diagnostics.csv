@@ -1,74 +1,89 @@
 diagnostic,curve_type,vertex_du,start,end,n_observations,n_missing,share_missing,notes
-coverage_by_curve_vertex,,,,,0,,,No ANBIMA curve data available.
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_3m_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_3m_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_6m_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_6m_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_1y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_1y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_2y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_2y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_3y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_3y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_5y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_5y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_7y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_7y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_10y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_10y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_3m_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_3m_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_6m_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_6m_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_1y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_1y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_2y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_2y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_3y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_3y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_5y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_5y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_7y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_7y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_10y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_10y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_3m_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_3m_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_6m_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_6m_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_1y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_1y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_2y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_2y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_3y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_3y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_5y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_5y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_7y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_7y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_10y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_10y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_level_5y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_level_5y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_slope_5y_1y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_slope_5y_1y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_slope_10y_2y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_slope_10y_2y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_curvature_1y_5y_10y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,pre_curvature_1y_5y_10y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_level_5y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_level_5y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_slope_5y_1y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_slope_5y_1y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_slope_10y_2y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_slope_10y_2y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_curvature_1y_5y_10y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,ipca_curvature_1y_5y_10y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_level_5y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_level_5y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_slope_5y_1y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_slope_5y_1y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_slope_10y_2y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_slope_10y_2y_avg_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_curvature_1y_5y_10y_eom_lag1
-monthly_missingness,,,1979-12-01,2026-11-01,0,564,1.0,bei_curvature_1y_5y_10y_avg_lag1
+coverage_by_curve_vertex,IPCA,63,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,IPCA,126,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,IPCA,252,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,IPCA,504,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,IPCA,756,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,IPCA,1260,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,IPCA,1764,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,IPCA,2520,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,PRE,63,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,PRE,126,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,PRE,252,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,PRE,504,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,PRE,756,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,PRE,1260,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,PRE,1764,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+coverage_by_curve_vertex,PRE,2520,2006-01-02,2025-01-31,4786,0,0.0,Target-vertex daily long data.
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_3m_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_6m_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_1y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_2y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_3y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_5y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_7y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_10y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_3m_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_6m_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_1y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_2y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_3y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_5y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_7y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_10y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_3m_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_6m_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_1y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_2y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_3y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_5y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_7y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_10y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_level_5y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_slope_5y_1y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_slope_10y_2y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_curvature_1y_5y_10y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_level_5y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_slope_5y_1y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_slope_10y_2y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_curvature_1y_5y_10y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_level_5y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_slope_5y_1y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_slope_10y_2y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_curvature_1y_5y_10y_eom_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_3m_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_6m_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_1y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_2y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_3y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_5y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_7y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_10y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_3m_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_6m_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_1y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_2y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_3y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_5y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_7y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_10y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_3m_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_6m_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_1y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_2y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_3y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_5y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_7y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_10y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_level_5y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_slope_5y_1y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_slope_10y_2y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,pre_curvature_1y_5y_10y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_level_5y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_slope_5y_1y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_slope_10y_2y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,ipca_curvature_1y_5y_10y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_level_5y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_slope_5y_1y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_slope_10y_2y_avg_lag1
+monthly_missingness,,,1979-12-01,2026-11-01,229,335,0.5939716312056738,bei_curvature_1y_5y_10y_avg_lag1
