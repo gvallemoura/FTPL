@@ -1,0 +1,19 @@
+check,value,status,n
+daily bei_1y = pre_1y - ipca_1y (max abs diff),1.7763568394002505e-15,PASS,
+daily bei_2y = pre_2y - ipca_2y (max abs diff),1.7763568394002505e-15,PASS,
+daily bei_3y = pre_3y - ipca_3y (max abs diff),1.7763568394002505e-15,PASS,
+daily bei_5y = pre_5y - ipca_5y (max abs diff),1.7763568394002505e-15,PASS,
+daily bei_7y = pre_7y - ipca_7y (max abs diff),1.7763568394002505e-15,PASS,
+daily bei_10y = pre_10y - ipca_10y (max abs diff),1.7763568394002505e-15,PASS,
+bei_1y_pct(t) = bei_1y_avg_lag1(t+1) (max abs diff),1.7763568394002505e-15,PASS,229.0
+bei_1y_eom_pct(t) = bei_1y_eom_lag1(t+1) (max abs diff),4.440892098500626e-16,PASS,229.0
+bei_2y_pct(t) = bei_2y_avg_lag1(t+1) (max abs diff),1.7763568394002505e-15,PASS,229.0
+bei_2y_eom_pct(t) = bei_2y_eom_lag1(t+1) (max abs diff),4.440892098500626e-16,PASS,229.0
+bei_3y_pct(t) = bei_3y_avg_lag1(t+1) (max abs diff),1.7763568394002505e-15,PASS,229.0
+bei_3y_eom_pct(t) = bei_3y_eom_lag1(t+1) (max abs diff),0.0,PASS,229.0
+bei_5y_pct(t) = bei_5y_avg_lag1(t+1) (max abs diff),1.3322676295501878e-15,PASS,229.0
+bei_5y_eom_pct(t) = bei_5y_eom_lag1(t+1) (max abs diff),0.0,PASS,229.0
+bei_7y_pct(t) = bei_7y_avg_lag1(t+1) (max abs diff),1.7763568394002505e-15,PASS,229.0
+bei_7y_eom_pct(t) = bei_7y_eom_lag1(t+1) (max abs diff),8.881784197001252e-16,PASS,229.0
+bei_10y_pct(t) = bei_10y_avg_lag1(t+1) (max abs diff),1.7763568394002505e-15,PASS,229.0
+bei_10y_eom_pct(t) = bei_10y_eom_lag1(t+1) (max abs diff),8.881784197001252e-16,PASS,229.0

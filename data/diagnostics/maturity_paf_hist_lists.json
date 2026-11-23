@@ -1,0 +1,34 @@
+{
+  "maturity_controls_base": [
+    "maturity_N_sched_pib_lag1",
+    "maturity_F_sched_pib_lag1",
+    "maturity_R_sched_pib_lag1",
+    "maturity12m_total_rmd_pib_lag1"
+  ],
+  "maturity_controls_robustness_Ramp": [
+    "maturity_Ramp_sched_pib_lag1"
+  ],
+  "paf_controls_base_rmd": [
+    "paf_gap_N_rmd_lag1",
+    "paf_gap_F_rmd_lag1",
+    "paf_gap_R_rmd_lag1",
+    "paf_gap_maturing_12m_rmd_lag1",
+    "paf_gap_avg_maturity_rmd_lag1"
+  ],
+  "paf_controls_hist": [
+    "paf_gap_N_hist_lag1",
+    "paf_gap_F_hist_lag1",
+    "paf_gap_R_hist_lag1"
+  ],
+  "paf_controls_hist_mkt": [
+    "paf_gap_N_hist_mkt_lag1",
+    "paf_gap_F_hist_mkt_lag1",
+    "paf_gap_R_hist_mkt_lag1"
+  ],
+  "notes": [
+    "maturity_{g}_sched_brl is due in t and known at the end of t-1 (predetermined); 2006-11..2010-01 uses realized RMD 1.3 redemptions (maturity_sched_source).",
+    "maturity_{g}_realized_rmd_brl is realized in t (contemporaneous) - validation only.",
+    "PAF bands are written for the DPF composition (RMD 2.4); the rmd version is the conceptually matching one, hist/hist_mkt are robustness.",
+    "paf_gap_maturing_12m_rmd uses the DPMFi share maturing in 12m (RMD 3.3), not DPF."
+  ]
+}

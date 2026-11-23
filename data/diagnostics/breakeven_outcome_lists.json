@@ -1,0 +1,45 @@
+{
+  "outcomes_main": [
+    "bei_1y_pct",
+    "bei_5y_pct",
+    "bei_10y_pct"
+  ],
+  "outcomes_eom": [
+    "bei_1y_eom_pct",
+    "bei_2y_eom_pct",
+    "bei_3y_eom_pct",
+    "bei_5y_eom_pct",
+    "bei_7y_eom_pct",
+    "bei_10y_eom_pct"
+  ],
+  "outcomes_robustness": [
+    "bei_1y_fisher_pct",
+    "bei_2y_fisher_pct",
+    "bei_3y_fisher_pct",
+    "bei_5y_fisher_pct",
+    "bei_7y_fisher_pct",
+    "bei_10y_fisher_pct",
+    "bei_2y_pct",
+    "bei_3y_pct",
+    "bei_7y_pct"
+  ],
+  "predetermined_controls_existing": [
+    "bei_1y_avg_lag1",
+    "bei_2y_avg_lag1",
+    "bei_3y_avg_lag1",
+    "bei_5y_avg_lag1",
+    "bei_7y_avg_lag1",
+    "bei_10y_avg_lag1",
+    "bei_1y_eom_lag1",
+    "bei_2y_eom_lag1",
+    "bei_3y_eom_lag1",
+    "bei_5y_eom_lag1",
+    "bei_7y_eom_lag1",
+    "bei_10y_eom_lag1"
+  ],
+  "notes": [
+    "Break-even = PRE - IPCA (simple difference), ANBIMA ETTJ; Fisher version for robustness.",
+    "3m and 6m vertices excluded (extrapolated real curve 2013-2021).",
+    "Coverage follows the ETTJ received (2006-01..2025-01) until the extension arrives."
+  ]
+}

@@ -25,7 +25,12 @@ sem λ) não substituem a curva ANBIMA; (v) integradas as curvas diárias da ETT
 ANBIMA (prefixada, IPCA e inflação implícita, 2006-01-02 a 2025-01-31) enviadas
 pelo João (`import_anbima_ettj.py` → `build_anbima_yield_curve_controls.py`), com a
 Etapa B e todos os estágios seguintes reexecutados. A extensão da série para antes
-de 2006 e depois de jan/2025 foi pedida ao João e chegará em alguns dias.
+de 2006 e depois de jan/2025 foi pedida ao João e chegará em alguns dias; (vi)
+criados dois estágios novos: `build_maturity_paf_hist.py` (vencimentos programados
+por classe com principal e cupons, janelas de 12 meses, composição e prazo médio do
+RMD e gaps do PAF recalculados com as participações longas) e
+`build_breakeven_outcomes.py` (inflação implícita mensal como variável de
+resultado).
 
 ## Research Objective
 
@@ -248,7 +253,8 @@ Imports an ANBIMA ETTJ workbook into the Etapa B input format. Run before
 `import_anbima_ettj.py` → `build_anbima_yield_curve_controls.py` →
 `build_fiscal_expectations_controls.py [--offline]` →
 `build_prisma_fiscal_news.py [--offline]` → `build_valuation_outcomes.py` →
-`build_stock_history_sgs.py [--offline]`. On 22/11/2026 the chain was rerun from
+`build_stock_history_sgs.py [--offline]` → `build_maturity_paf_hist.py [--offline]`
+→ `build_breakeven_outcomes.py`. On 22/11/2026 the chain was rerun from
 `import_anbima_ettj.py` on, with `--offline` (no new Focus or SGS pulls). Against
 the previous commit, every downstream panel gained the 36 PCA columns and changed
 only in the 72 curve columns (previously empty); no other column changed.
@@ -396,6 +402,69 @@ saved pulls.
   57 months of 2000–2004, N errors in every month (up to 11.6%, R$ 7.4 bn) and
   share errors up to 1.7 pp.
 
+### `build_maturity_paf_hist.py`
+
+Builds a long predetermined maturity schedule and recomputes the PAF gaps. Reads
+`ftpl_monthly_panel_with_stock_history.csv`, writes
+`data/clean/ftpl_monthly_panel_with_maturity_paf_hist.csv` (+93 columns). Source:
+the RMD annex already preserved in
+`data/raw/liquidity_sources/Anexo RMD_Maio_26.xlsx` (read only; SHA-256 in the
+audit), plus IGP-M (SGS 189, saved to `data/raw/bcb/sgs_189_<UTC>.csv`; `--offline`
+reuses it). RMD sheets: 2.2 month-end stock by security (2010-01 on), 1.3 realized
+redemptions by title (2006-11 on), 3.3 stock maturing in 12 months by indexer
+(1999-12 on), 2.4 DPF composition by indexer (2000-12 on), 3.7 DPF average
+maturity (2005-12, 2006-11 on).
+
+- `maturity_{g}_sched_brl` (g = N, F, R, C; `Ramp` = R + C; `total_NFR`): debt
+  service due in month t, known at the end of t−1. Principal = curve value at the
+  end of t−1 of securities maturing in t (same concept as the eDPF proxy);
+  coupons = quantity at t−1 × coupon per bond (NTN-F 10% in Jan/Jul; NTN-B 6% and
+  NTN-C 6% (12% for the 2031 bond) on VNA built from IPCA/IGP-M of t−2, in the
+  maturity month and six months away). Classes follow the eDPF mapping (R = all
+  NTN-B variants). Principal and coupons are also kept separately
+  (`_sched_principal_brl`, `_sched_coupon_brl`).
+- Coverage: schedule from RMD 2.2 for t = 2010-02 to 2026-06; for 2006-11 to
+  2010-01 the column uses realized RMD 1.3 redemptions (`maturity_sched_source`).
+  No monthly schedule before 2006-11 yet.
+- Validation (stops on failure): principal identical to the eDPF proxy in all 59
+  proxy months (gap 0); schedule vs realized redemptions 2010-02..2026-05: mean
+  |gap| / mean realized = 0.9% (N), 0.9% (F), 2.9% (R), 1.6% (C), 1.2% (N+F+R),
+  correlations ≥ 0.9997; RMD 3.3 pre-fixed 12m vs 2.2 principal: corr 0.999.
+  `maturity_{g}_realized_rmd_brl` is contemporaneous - validation only.
+- 12-month windows from RMD 3.3 at the end of t−1: `maturity12m_{N,F,Ramp,total}_rmd_brl_lag1`
+  and `_share_lag1` (share of that block's stock maturing in 12m), from 2000-01;
+  `maturity12m_total_rmd_pib_lag1`; `liquidity_reserve_over_maturity12m_rmd_lag1`.
+- RMD composition and maturity: `share_{pre,price,float,fx}_dpf_rmd_lag1`,
+  `stock_dpf_rmd_brl_lag1`, `avg_maturity_dpf_years_rmd_lag1`.
+- PAF gaps (`paf_gap_`, `paf_dist_*_to_lower/upper_`, `paf_*_below/above_band_`)
+  for three share definitions: `hist` (N+F+R, `share_{g}_hist_lag1`), `hist_mkt`
+  (total market) and `rmd` (DPF composition, RMD 2.4, also FX). Coverage 2003-01 on
+  (the old `paf_gap_*_lag1` started 2017-10; `paf_gap_R_hist_lag1` reproduces it
+  exactly where both exist). Also `paf_gap_maturing_12m_rmd_lag1` (DPMFi share
+  maturing in 12m, RMD 3.3) and `paf_gap_avg_maturity_rmd_lag1` (2006-01 on).
+- Recommended PAF version: `rmd`. The PAF bands are written for the DPF
+  composition, including external debt and NTN-C. With N+F+R as denominator the
+  gaps are badly biased before 2010 (e.g. Selic share above the band in 71% of
+  months, mean gap +0.50 in 2003), because FX-linked debt and NTN-C are left out.
+- Outputs: `data/intermediate/maturity_paf/` (security stock, schedule, realized
+  redemptions), diagnostics `maturity_paf_hist_{audit,validation,diagnostics}.csv`
+  and `maturity_paf_hist_lists.json`, figure `data/figures/maturity_paf_hist.png`.
+
+### `build_breakeven_outcomes.py`
+
+Monthly break-even inflation outcomes from the Etapa B daily curves
+(`data/intermediate/anbima/anbima_yield_curve_features_daily.csv`). Writes
+`data/clean/ftpl_monthly_panel_with_breakeven_outcomes.csv` (+19 columns, the
+latest panel, 564 × 548). For h = 1, 2, 3, 5, 7, 10 years: `bei_{h}_pct` (monthly
+mean in t, the main outcome, comparable with the other valuation outcomes),
+`bei_{h}_eom_pct` (last business day of t) and `bei_{h}_fisher_pct` (Fisher
+version, robustness); `bei_n_days`. 3m/6m excluded (extrapolated real curve).
+Checks: BEI = PRE − IPCA daily, and `bei_{h}_pct`(t) = `bei_{h}_avg_lag1`(t+1),
+`bei_{h}_eom_pct`(t) = `bei_{h}_eom_lag1`(t+1) (all exact, 229 months). Coverage
+2006-01 to 2025-01, until the ETTJ extension arrives. Diagnostics
+`breakeven_outcomes_{audit,validation,diagnostics}.csv`,
+`breakeven_outcome_lists.json`; figure `data/figures/breakeven_outcomes.png`.
+
 #### Other files in `DadosJoao/data/` (audited 22/11/2026)
 
 - `data_yields.xlsx` (delivered later the same day): daily ANBIMA ETTJ yields
@@ -484,7 +553,9 @@ earlier or auxiliary R script and is not part of the active Python pipeline.
 │   ├── build_fiscal_expectations_controls.py
 │   ├── build_prisma_fiscal_news.py
 │   ├── build_valuation_outcomes.py
-│   └── build_stock_history_sgs.py
+│   ├── build_stock_history_sgs.py
+│   ├── build_maturity_paf_hist.py
+│   └── build_breakeven_outcomes.py
 ├── notebooks/
 │   ├── ftpl_build_data_notebook.ipynb
 │   ├── build_structural_controls.ipynb
@@ -597,8 +668,12 @@ The principal current panels are:
 - `ftpl_monthly_panel_with_fiscal_news.csv`: 564 × 368 (Prisma/Focus news);
 - `ftpl_monthly_panel_with_valuation_outcomes.csv`: 564 × 386 (adds sovereign
   spread and yields);
-- `ftpl_monthly_panel_with_stock_history.csv`: 564 × 436, the latest and most
-  complete panel (adds stock and shares by class from 2000-02, `*_hist`).
+- `ftpl_monthly_panel_with_stock_history.csv`: 564 × 436 (adds stock and shares
+  by class from 2000-02, `*_hist`);
+- `ftpl_monthly_panel_with_maturity_paf_hist.csv`: 564 × 529 (maturity schedule,
+  RMD composition and long PAF gaps);
+- `ftpl_monthly_panel_with_breakeven_outcomes.csv`: 564 × 548, the latest and most
+  complete panel (adds monthly break-even outcomes).
 
 Column counts include `month`.
 
@@ -657,7 +732,11 @@ Completed or substantially implemented:
   and 1y nominal yields (`build_valuation_outcomes.py`);
 - stock and shares by class extended to 2000-02–2026-09 with BCB SGS, spliced
   with eDPF and validated over 2017-09–2026-04 (`build_stock_history_sgs.py`);
-- SGS decimal-parsing and IBC-Br series fixes, with full pipeline rerun.
+- SGS decimal-parsing and IBC-Br series fixes, with full pipeline rerun;
+- predetermined maturity schedule (principal + coupons) from 2006-11, 12-month
+  maturity windows from 2000-01, and PAF gaps from 2003-01 in three versions
+  (`build_maturity_paf_hist.py`);
+- monthly break-even outcomes, 2006-01 to 2025-01 (`build_breakeven_outcomes.py`).
 
 Not yet implemented or not yet populated:
 
@@ -668,9 +747,9 @@ Not yet implemented or not yet populated:
 - survey-purged issuance shocks \(\varepsilon_t^j\);
 - ETTJ extension before 2006-01 and after 2025-01 (requested from João; the
   2005 baseline start currently has no curve controls for 2005-01 to 2006-01);
-- break-even outcome variables for the local projections (the daily BEI curve is
-  now available in `data/intermediate/anbima/`, but no monthly outcome version
-  has been built yet);
+- monthly maturity schedule before 2006-11 (would need older RMD security-level
+  annexes or a reconstruction from auctions and buybacks); NTN-B1 instalments are
+  not modelled;
 - local projection estimation and formal ranking tests;
 - narrative event database and pension-fund regulatory IV robustness.
 
@@ -678,8 +757,8 @@ Recommended order of work:
 
 1. Import João's extended ETTJ (`import_anbima_ettj.py --source ...`) and rerun
    the chain from Etapa B on; audit coverage.
-2. Replace the maturity proxy with predetermined financial redemption values when
-   security-level coupons, indexation, and quantities are available.
+2. Use `maturity_{g}_sched_*` and the `rmd` PAF gaps in the forecasting
+   equations instead of the eDPF proxy and the 2017+ PAF gaps.
 3. Choose the baseline \(\Delta\mathcal{F}_t^P\) from the Focus and Prisma series
    and fix the release timing of the Prisma surprise.
 4. Estimate the three issuance forecasting equations using the structural and
@@ -695,8 +774,8 @@ Recommended order of work:
   notebook, but Etapa A and Etapa B now have repository-root Python scripts. The
   stable notebook logic should gradually be moved into scripts or a package-style
   pipeline with explicit stage dependencies.
-- The current `scheduled_maturities_proxy.csv` is explicitly a proxy based on market stock values and maturity timing. The PDF recommends a richer predetermined financial redemption measure when the required security-level data are available.
-- The final combined panel extends back to 1979 because macro series are longer than issuance data. The usable empirical sample for issuance-based tests starts in 2000, Stock and share controls now cover 2000-02 onward through `build_stock_history_sgs.py` (`*_hist` columns; the original eDPF columns still start in 2017-09), while the maturity proxy remains available only from 2021.
+- `scheduled_maturities_proxy.csv` (eDPF, principal only, 2017-10 on) is superseded by `maturity_{g}_sched_brl` from `build_maturity_paf_hist.py` (principal + coupons, 2006-11 on), whose principal reproduces the proxy exactly. Etapa A columns built from the proxy are kept unchanged.
+- The final combined panel extends back to 1979 because macro series are longer than issuance data. The usable empirical sample for issuance-based tests starts in 2000, Stock and share controls now cover 2000-02 onward through `build_stock_history_sgs.py` (`*_hist` columns; the original eDPF columns still start in 2017-09). The eDPF maturity proxy starts in 2017-10 (not 2021 as stated earlier); the new schedule starts in 2006-11 and the 12-month windows in 2000-01.
 - The PAF targets cover 2003--2026, while the liquidity-reserve series covers
   2015-01--2026-05. Their shorter coverage is expected and should not be filled by
   interpolation outside the official source period.
