@@ -36,7 +36,10 @@ de emissão por classe (eq. 19 da nota metodológica) e as inovações \(u_t^j\)
 (2026), e criado `build_purged_shocks.py`, com a purga pelo Focus primário e doze
 alternativas (DocumentacaoProjeto.tex, seção "Escolha de ΔF e purga fiscal"); (ix)
 construídas as revisões Focus com `baseCalculo = 1` (só existem desde 2021-03-31),
-usadas como robustez da purga.
+usadas como robustez da purga; (x) criados `build_inflation_expectations.py`
+(expectativa Focus de IPCA 12 meses) e `build_local_projections.py`, com a primeira
+rodada de projeções locais e testes de ordenação (DocumentacaoProjeto.tex, seção
+"Projeções locais").
 
 ## Research Objective
 
@@ -260,7 +263,10 @@ Imports an ANBIMA ETTJ workbook into the Etapa B input format. Run before
 `build_fiscal_expectations_controls.py [--offline | --fetch PREFIX,...]` →
 `build_prisma_fiscal_news.py [--offline]` → `build_valuation_outcomes.py` →
 `build_stock_history_sgs.py [--offline]` → `build_maturity_paf_hist.py [--offline]`
-→ `build_breakeven_outcomes.py` → `build_issuance_forecasts.py [--offline]` → `build_purged_shocks.py`. On 22/11/2026 the chain was rerun from
+→ `build_breakeven_outcomes.py` → `build_issuance_forecasts.py [--offline]` → `build_purged_shocks.py`
+→ `build_inflation_expectations.py [--offline]` → `build_offer_surprises.py`
+→ `build_local_projections.py` (`diagnose_auction_takeup.py` is a standalone
+diagnostic, also imported by `build_offer_surprises.py`). On 22/11/2026 the chain was rerun from
 `import_anbima_ettj.py` on, with `--offline` (no new Focus or SGS pulls). Against
 the previous commit, every downstream panel gained the 36 PCA columns and changed
 only in the 72 curve columns (previously empty); no other column changed.
@@ -576,6 +582,110 @@ u_R with p = 0.24. Fragile (47 months, noisy 36m revision); shocks correlate 0.9
 (N, F) and 0.92 (R) with the main ones. Open: date the Prisma survey and the RTN
 release; decide with João whether to purge priced fiscal news too.
 
+### `build_inflation_expectations.py`
+
+Focus median of IPCA inflation over the next 12 months (Olinda
+`ExpectativasMercadoInflacao12Meses`, `baseCalculo = 0`), 2001-12 to 2026-11. Raw pulls
+are saved as `data/raw/focus/focus_ipca12m_<UTC>.csv` (never overwritten;
+`--offline` reads the newest). Adds `focus_ipca12m_pct` (monthly mean of the smoothed
+series, main), `focus_ipca12m_eom_pct`, `focus_ipca12m_nonsmooth_pct` (corr. 0.996)
+and `_lag1` versions. Writes `data/clean/ftpl_monthly_panel_with_inflation_expectations.csv`
+(564 × 757; input of `build_offer_surprises.py`); audit `focus_ipca12m_audit.csv`.
+
+### `build_local_projections.py`
+
+Local projections (eq. 30 of the note), h = 0..24, the three purged shocks jointly:
+`y_{t+h} − y_{t−1} = a_h + Σ_j b_h^j e_t^j + G_h' X_{t−1} + month dummies`. Shock unit:
+issuance surprise of 0.1% of lagged 12-month GDP (eps × 1000), equal value across
+classes (1 s.d. = 1.55 N, 1.50 F, 0.66 R). Outcomes: price level (100 log IPCA),
+Focus IPCA 12m, Selic target, LTN 1y, real 5y/10y, break-even 2y/5y, 100 log BRL/USD,
+EMBI, 100 log IBC-Br. X_{t−1}: 3 lags of the outcome's monthly change, of the three
+shocks, of IPCA inflation, Selic change, IBC-Br growth and depreciation; Selic, EMBI
+and Focus IPCA at t−1; nominal-curve PCs. Sample t = 2007-02..2025-02 (217 at h = 0).
+Newey–West with bandwidth max(nw(n), h+1). Window tests (0–6, 7–12, 13–24, 0–24) use
+the joint HAC covariance across horizons from stacked scores: mean difference with
+one-sided p, sup-t joint test and 90% simultaneous bands (20,000 draws), share of
+horizons with the predicted sign. The joint Wald is saved but over-rejects (inverts a
+near-singular covariance of up to 25 horizons); sup-t is the joint test used.
+Specs: `base`, `lags1`, `lags6`, `evdum`, `pre2020`, `ordlast` (contemporaneous
+changes of FX, EMBI, real 5y, LTN 1y and Focus in X), `nopurge`, `cfrisk`, `pprim`
+and `fprim16` (Prisma sample, 1 lag), `rt`, `ramp`.
+
+Preliminary results: the predicted ranking does not appear. Price level, mean
+β^N − β^R over 0–24 = −0.16 (0.14), β^N − β^F = −0.16 (0.08, sup-t p = 0.002, wrong
+sign); no horizon has β^N > β^R or N > F > R. The N shock tends to lower prices,
+expectations, Selic and yields; the F shock raises the price level by ~0.13% at
+3–12 months. The R shock is imprecise for inflation and is followed by higher Selic
+and real yields after 12 months. On impact the R shock comes with lower real yields
+(−0.12 pp), lower EMBI (−9 bp) and BRL appreciation (−1.6%), consistent with
+opportunistic issuance within the month (the forecast only uses t−1 information);
+`ordlast` changes later responses little. The negative N − R sign holds across
+specs, nearly vanishes before 2020 and is largest on the Prisma sample. Outputs
+`local_projections_{irf,tests,fit,shock_scale,audit}.csv`,
+`local_projection_lists.json`, `data/intermediate/local_projections/`, figures
+`data/figures/local_projections_{base,base_extra,differences,evdum,pre2020,cfrisk,
+nopurge,ordlast}.png`. Next: handle within-month simultaneity (auction-level
+dating or announced supply), share interactions (eq. 36), state dependence
+(eq. 37), block bootstrap.
+
+### `diagnose_auction_takeup.py` and within-month identification
+
+Exploratory diagnostic on the Treasury auction history
+(`data/raw/historico-leiloes-todos.xls`, columns Oferta/Venda), first-round sale
+auctions. The unit is the lot: when several maturities share one lot, the file
+repeats the lot on each bond row, so same-title/same-day/same-offer groups whose
+sales add up to at most the lot are collapsed into one joint lot (sum = lot: clear;
+sum < lot: ambiguous, joint by default, separate as robustness). Since 2006-11
+there are 297 clear + 262 ambiguous joint lots in R, 167 + 124 in F, 31 + 77 in N.
+Lots selling the whole offer: N 78%, F 65%, R 63% (ambiguous as separate: 77%,
+56%, 50%). **Correction:** the earlier bond-row count (R 28%, "NTN-B issuance is
+demand-capped") was an artifact of joint lots. The purged shocks co-move with
+same-month asset prices (eps_R: −0.31 with Δ real 5y, −0.27 with depreciation;
+eps_N: −0.22, −0.22; eps_F ≈ 0) and the monthly offered value itself reacts to the
+month (R: −0.14, −0.30; N: −0.21, −0.26). Binding-share correlations with prices
+are small except in N (−0.24 with Δ EMBI); binding persistence by lot composition:
+P(bind | prev bind) 0.83/0.79/0.75, P(bind | prev not) 0.63/0.41/0.44 (N/F/R).
+Outputs `auction_takeup_{by_class,by_year,monthly_corr,binding,lot_vs_bond,
+lot_types}.csv`, `data/intermediate/auction_takeup/`. DocumentacaoProjeto.tex
+(subsection "Identificação dentro do mês") formalises the bias and proposes:
+(1) auction-level offer surprises, also weighted by the predicted binding
+probability (never selecting binding auctions); (2) high-frequency reaction to
+edital announcements; (3) bounds between `base` and `ordlast`.
+
+### `build_offer_surprises.py` (Proposal 1)
+
+Unit: auction day of each title (LTN, NTN-F, LFT, NTN-B, NTN-B Principal), built
+from lots (2,212 days N, 882 F, 686 R). Value offered OV_k = Σ lot × P_ref, P_ref =
+mean of each bond's last auction unit price before the day (title mean for new
+bonds); edital assumed on the day before (info set k−2). Surprises: `naive`
+OV_k − OV_prev (previous auction day of the title); `pred` OV_k − OV_prev·exp(x'b)
+with a recursive per-class OLS on pre-edital yield changes (ETTJ), previous take-up
+and binding state, days since previous auction and maturity; `_w` versions × π̂
+from a recursive logit; `naive_sep` treats ambiguous groups as separate lots.
+Monthly sums / lagged 12m GDP: `offsurp_{j}_{naive,pred,naive_w,pred_w,naive_sep}`.
+Writes `data/clean/ftpl_monthly_panel_with_offer_surprises.csv` (564 × 775, the
+latest panel, input of `build_local_projections.py`), auction-day file in
+`data/intermediate/offer_surprises/`, diagnostics `offer_surprises_{audit,
+forecast_fit,anticipation,first_stage,exogeneity}.csv`, figure
+`data/figures/offer_surprises.png`.
+
+Results: the lot forecast barely beats the naive one (OOS R² 0.03/−0.02/0.10), so
+`pred` is `naive` plus noise; logit AUC at day level 0.62/0.71/0.61.
+Sanderson–Windmeijer F (with LP controls): `naive` N 9.4, F 33.3, R 6.1;
+`naive_sep` 9.7/9.2/9.6; `naive_w` 9.5/46.4/10.4 (185 months); `pred` < 1. Diagonal
+first stage. Correlation with same-month prices falls but does not vanish
+(R: −0.18 real 5y, −0.13 FX; N: −0.10, −0.19). LP-IV (`iv_naive`, main;
+`iv_naive_w`, `iv_naive_sep`, `iv_pred`) and reduced form (`rf_naive`) added to
+`build_local_projections.py`. Findings: the OLS simultaneity bias disappears in N
+(real 5y impact −0.04 → +0.04) and the significant negative N−R / N−F gaps vanish
+(price level, mean N−R over 0–24: −0.16 → +0.16 (0.40)); the robust result is F:
+a 0.1% of GDP LFT surprise raises the price level ~0.2% at 6–12 months in all IV
+versions and in the reduced form; R remains unidentified (weak instrument,
+impact still with lower real yields and BRL appreciation; reduced-form impact on
+the real yield −0.14, t −3.1). The ranking is undetermined (s.e. 0.3–0.4 on N−R).
+Open: weak-IV-robust (subvector AR) inference, real edital dates, a supply source
+for R that does not track demand.
+
 #### Other files in `DadosJoao/data/` (audited 22/11/2026)
 
 - `data_yields.xlsx` (delivered later the same day): daily ANBIMA ETTJ yields
@@ -668,7 +778,11 @@ earlier or auxiliary R script and is not part of the active Python pipeline.
 │   ├── build_maturity_paf_hist.py
 │   ├── build_breakeven_outcomes.py
 │   ├── build_issuance_forecasts.py
-│   └── build_purged_shocks.py
+│   ├── build_purged_shocks.py
+│   ├── build_inflation_expectations.py
+│   ├── diagnose_auction_takeup.py
+│   ├── build_offer_surprises.py
+│   └── build_local_projections.py
 ├── notebooks/
 │   ├── ftpl_build_data_notebook.ipynb
 │   ├── build_structural_controls.ipynb
@@ -859,7 +973,10 @@ Completed or substantially implemented:
 - analysis of the \(\Delta\mathcal{F}_t\) candidates and survey-purged shocks
   \(\varepsilon_t^j\), main (Focus primary) and twelve alternatives, including the
   baseCalculo = 1 Focus revisions (2021-04+)
-  (`build_purged_shocks.py`).
+  (`build_purged_shocks.py`);
+- Focus 12-month IPCA expectations and a first round of local projections with
+  window tests and simultaneous bands (`build_inflation_expectations.py`,
+  `build_local_projections.py`).
 
 Not yet implemented or not yet populated:
 
@@ -872,7 +989,9 @@ Not yet implemented or not yet populated:
 - monthly maturity schedule before 2006-11 (would need older RMD security-level
   annexes or a reconstruction from auctions and buybacks); NTN-B1 instalments are
   not modelled;
-- local projection estimation and formal ranking tests;
+- within-month simultaneity of issuance and asset prices (auction-level shocks or
+  announced supply); share interactions, state dependence and bootstrap for the
+  local projections;
 - narrative event database and pension-fund regulatory IV robustness.
 
 Recommended order of work:
@@ -883,8 +1002,10 @@ Recommended order of work:
    fiscal news).
 3. Re-estimate the forecasting equations and the purge when the extended ETTJ
    arrives.
-4. Estimate local projections and test the primary `N > R` and sharper `N > F > R`
-   restrictions, followed by state-dependence and valuation-outcome robustness.
+4. Finish within-month identification: weak-IV-robust inference for the LP-IV
+   (`build_offer_surprises.py`) and a supply source for R, then re-run the local
+   projections and the `N > R` / `N > F > R` tests, followed by share interactions,
+   state dependence and bootstrap.
 
 ## Notes And Open Issues
 

@@ -1,0 +1,2 @@
+run_timestamp_utc,input_panel,horizons,shock_unit,windows,sup_t_draws,seed,specs,max_rank_deficit
+20261124T005349Z,data/clean/ftpl_monthly_panel_with_offer_surprises.csv,24,0.1% of lagged 12-month GDP,"['0-6', '7-12', '13-24', '0-24']",20000,20261123,"['base', 'lags1', 'lags6', 'evdum', 'pre2020', 'nopurge', 'cfrisk', 'pprim', 'fprim16', 'ordlast', 'rt', 'ramp', 'iv_naive', 'iv_naive_w', 'iv_pred', 'iv_naive_sep', 'rf_naive']",0

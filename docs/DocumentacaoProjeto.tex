@@ -1878,6 +1878,571 @@ amostra da ETTJ for estendida após 2025-02.
     com \path{baseCalculo = 1} já foram construídas (Subseção~\ref{sec:bc1}).
 \end{enumerate}
 
+\section{Projeções locais}\label{sec:lp}
+
+\subsection{Expectativa de inflação Focus}
+
+\begin{sloppypar}
+A expectativa de inflação, um dos resultados principais da nota, ainda não estava no
+painel. O script \path{src/build_inflation_expectations.py} baixa da API Olinda a
+mediana diária do Focus para o IPCA dos próximos 12 meses
+(série \path{ExpectativasMercadoInflacao12Meses}, com \path{baseCalculo = 0}) e grava um
+arquivo bruto novo com carimbo UTC (\path{data/raw/focus/focus_ipca12m_*.csv}). As
+variáveis são \path{focus_ipca12m_pct} (média mensal da série suavizada, a principal),
+\path{focus_ipca12m_eom_pct} (último dia do mês),
+\path{focus_ipca12m_nonsmooth_pct} (série não suavizada, correlação de 0,996 com a principal) e as versões
+\path{_lag1}. A cobertura vai de 2001-12 a 2026-11. O painel resultante,
+\path{data/clean/ftpl_monthly_panel_with_inflation_expectations.csv}, tem 564
+linhas e 757 colunas e é a entrada de \path{src/build_offer_surprises.py} (Subseção~\ref{sec:prop1}); \path{--offline} lê o arquivo
+bruto mais recente.
+\end{sloppypar}
+
+\subsection{Especificação}
+
+O script \path{src/build_local_projections.py} estima a eq.~(\ref{eq:doc_local_projection})
+para \(h=0,\ldots,24\), com os três choques purgados juntos:
+\[
+y_{t+h}-y_{t-1}=\alpha_h+\sum_{j\in\{N,F,R\}}\beta_h^j\,\varepsilon_t^j
++\Gamma_h'X_{t-1}+\mu_{m(t)}+v_{t+h}.
+\]
+\begin{itemize}[leftmargin=1.2cm]
+    \item \textbf{Unidade do choque.} \(\varepsilon_t^j\) é multiplicado por 1000, de
+    modo que uma unidade é uma emissão inesperada de 0,1\% do PIB de 12 meses
+    defasado, o mesmo valor para as três classes. É a comparação a que se refere a
+    ordenação \(\kappa^N>\kappa^F>\kappa^R\). Um desvio-padrão do choque vale 1,55
+    unidade em \(N\), 1,50 em \(F\) e 0,66 em \(R\).
+    \item \textbf{Resultados.} Nível de preços (\(100\log\) IPCA, de modo que
+    \(\beta_h\) é a inflação acumulada), expectativa Focus de 12 meses, meta Selic,
+    LTN de 1 ano, juros reais de 5 e 10 anos, inflação implícita de 2 e 5 anos,
+    câmbio (\(100\log\) BRL/USD), EMBI e, para o canal de restrição de recursos,
+    IBC-Br (\(100\log\)).
+    \item \textbf{Controles \(X_{t-1}\)} (todos datados de \(t-1\) ou antes), com
+    \(p=3\) defasagens: variação mensal do próprio resultado; os três choques; inflação
+    mensal do IPCA; variação da meta Selic; crescimento do IBC-Br; depreciação
+    cambial; nível da Selic, do EMBI e da expectativa Focus em \(t-1\); os três
+    componentes principais da curva prefixada (médias de \(t-1\)); dummies de mês.
+    Controles que repetem a defasagem do próprio resultado são excluídos, e
+    dummies colineares são retiradas automaticamente.
+    \item \textbf{Amostra.} \(t\) de 2007-02 a 2025-02 (217 meses em \(h=0\)); com
+    resultados observados até 2026-10, a amostra só encolhe após \(h=20\), exceto
+    na inflação implícita, que termina em 2025-01.
+    \item \textbf{Inferência.} Newey--West com janela \(\max\{nw(n),h+1\}\). Para
+    janelas de horizontes (0--6, 7--12, 13--24 e 0--24) a covariância conjunta dos
+    coeficientes de choque entre horizontes é estimada com os escores empilhados na
+    amostra comum da janela; como \(X_{t-1}\) não depende de \(h\), bastam as linhas
+    de choque de \((X'X)^{-1}X'e_{t,h}\). Com ela se calculam: a diferença média
+    \(\bar d=\frac{1}{|W|}\sum_{h\in W}(\beta_h^{j}-\beta_h^{k})\) e seu \(p\)
+    unilateral para \(\bar d>0\); o teste sup-\(t\) de igualdade em todos os horizontes
+    e a banda simultânea de 90\% (20\,000 simulações); a fração de horizontes com
+    o sinal previsto. O Wald conjunto de igualdade também é gravado, mas
+    rejeita em quase tudo, inclusive no IBC-Br, porque inverte uma covariância de
+    até 25 horizontes quase colineares com cerca de 200 observações; o sup-\(t\) é
+    o teste conjunto usado.
+\end{itemize}
+
+\begin{center}
+\small
+\begin{tabular}{p{0.24\textwidth}p{0.62\textwidth}}
+\toprule
+Especificação & Variação \\
+\midrule
+\path{base} & choques \path{eps_{j}_base_fprim}, \(p=3\) \\
+\path{lags1}, \path{lags6} & \(p=1\) e \(p=6\) \\
+\path{evdum} & dummies de 2007-04 e 2020-03 a 2020-07 em \(X\) \\
+\path{pre2020} & \(t\le\) 2019-12 \\
+\path{ordlast} & variações em \(t\) de câmbio, EMBI, juro real de 5 anos, LTN de 1
+ano e expectativa Focus em \(X\): emissão ordenada por último no mês, e o impacto
+dessas variáveis é zero por construção \\
+\path{nopurge} & inovações \(u_t^j\) sem purga \\
+\path{cfrisk} & purga \path{fprim_cfrisk} (Focus primário e choque de Carvalho Filho) \\
+\path{pprim}, \path{fprim16} & purga Prisma e Focus na amostra do Prisma (2016+),
+\(p=1\); o Prisma não tem janeiro e fevereiro \\
+\path{rt} & equação de previsão em pseudo tempo real \\
+\path{ramp} & choque real ampliado (NTN-B + NTN-C) no lugar de \(R\) \\
+\path{iv_naive}, \path{iv_naive_w}, \path{iv_naive_sep}, \path{iv_pred} & MQ2E com as
+surpresas de oferta como instrumentos (Subseção~\ref{sec:prop1}) \\
+\path{rf_naive} & forma reduzida: surpresas de oferta no lugar dos choques \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Resultados preliminares}
+
+A tabela resume as respostas da especificação base (erros-padrão entre parênteses).
+
+\begin{center}
+\footnotesize
+\begin{tabular}{llccc}
+\toprule
+Resultado & \(h\) & \(N\) & \(F\) & \(R\) \\
+\midrule
+Nível de preços (\%) & 6 & \(-0{,}01\) (0,05) & 0,13 (0,05) & 0,10 (0,14) \\
+ & 12 & \(-0{,}05\) (0,07) & 0,13 (0,07) & 0,20 (0,23) \\
+ & 24 & \(-0{,}17\) (0,10) & 0,09 (0,11) & 0,08 (0,26) \\
+Expectativa IPCA 12m (p.p.) & 3 & \(-0{,}04\) (0,02) & 0,03 (0,03) & 0,03 (0,03) \\
+ & 12 & 0,00 (0,03) & 0,04 (0,03) & 0,09 (0,08) \\
+Meta Selic (p.p.) & 12 & \(-0{,}17\) (0,13) & 0,17 (0,10) & 0,39 (0,31) \\
+ & 24 & \(-0{,}33\) (0,09) & 0,07 (0,16) & 0,51 (0,35) \\
+Juro real 5 anos (p.p.) & 0 & \(-0{,}04\) (0,01) & 0,00 (0,02) & \(-0{,}12\) (0,03) \\
+ & 18 & \(-0{,}14\) (0,05) & 0,00 (0,05) & 0,33 (0,12) \\
+Câmbio (\%) & 0 & \(-0{,}35\) (0,14) & 0,31 (0,21) & \(-1{,}55\) (0,37) \\
+EMBI (p.b.) & 0 & \(-1{,}7\) (1,2) & 0,4 (1,7) & \(-8{,}8\) (2,7) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{enumerate}[leftmargin=1.2cm]
+    \item \textbf{A ordenação prevista não aparece.} No nível de preços, a diferença
+    média \(\beta^N-\beta^R\) em 0--24 meses é \(-0{,}16\) (0,14) e
+    \(\beta^N-\beta^F\) é \(-0{,}16\) (0,08); nenhum horizonte tem \(\beta^N>\beta^R\)
+    nem \(N>F>R\). O choque de prefixados tende a reduzir preços, expectativas,
+    Selic e juros; o de LFT eleva o nível de preços em cerca de 0,13\% entre 3 e 12
+    meses (\(t\approx 2{,}5\)). O sup-\(t\) rejeita a igualdade \(N=F\) no nível de
+    preços (\(p=0{,}002\)) e na expectativa Focus (\(p=0{,}005\)), mas com o sinal
+    contrário ao previsto. \(N=R\) não é rejeitada no nível de preços (\(p=0{,}13\)).
+    \item \textbf{O choque \(R\) é impreciso na inflação} (erro-padrão de 0,14 a 0,26
+    no nível de preços), porque tem um terço da variância dos demais. Ele é
+    acompanhado de alta da Selic e dos juros reais após 12 meses (0,33 p.p. no juro
+    de 5 anos em \(h=18\)).
+    \item \textbf{Impacto em \(h=0\) indica emissão oportunista.} No mês do choque
+    \(R\), o juro real de 5 anos cai 0,12 p.p., o EMBI cai 9 p.b. e o real se
+    aprecia 1,6\%; no mês do choque \(N\), a LTN de 1 ano cai 0,07 p.p. e a
+    inflação implícita de 2 anos cai 0,04 p.p. O Tesouro parece emitir mais quando
+    o mercado do mês está favorável, já que a equação de previsão só usa
+    informação de \(t-1\). A Subseção~\ref{sec:ident} detalha o problema e as
+    propostas para tratá-lo.
+    \item \textbf{Robustez.} O sinal negativo de \(\bar d^{NR}\) no nível de preços se
+    mantém em todas as especificações; ele quase desaparece antes de 2020
+    (\(-0{,}02\)) e é maior na amostra do Prisma (\(-0{,}47\), 87 meses), onde o
+    choque \(R\) eleva o nível de preços em 0,6\% em 12--24 meses. Purga, número de
+    defasagens, dummies e bloco real ampliado mudam pouco os resultados.
+\end{enumerate}
+
+Os resultados estão em
+\path{data/diagnostics/local_projections_{irf,tests,fit,shock_scale,audit}.csv},
+\path{local_projection_lists.json}, nas bandas sup-\(t\) de
+\path{data/intermediate/local_projections/} e nas figuras
+\path{data/figures/local_projections_base.png} (resultados principais),
+\path{_base_extra.png}, \path{_differences.png} (diferenças com bandas pontual e
+simultânea) e uma por especificação de robustez (\path{_evdum}, \path{_pre2020},
+\path{_cfrisk}, \path{_nopurge}, \path{_ordlast}).
+
+\subsection{Identificação dentro do mês}\label{sec:ident}
+
+\paragraph{O problema.} A equação de previsão (Seção~\ref{sec:prev}) usa apenas
+informação de \(t-1\). Isso garante que \(u_t^j\) não seja previsível com o passado,
+mas não que seja exógeno às condições de mercado de \(t\). A emissão bruta de um
+mês soma cerca de sete dias de leilão. Em cada leilão, o Tesouro escolhe o lote
+ofertado e a taxa máxima que aceita, e o mercado escolhe quanto demanda a cada
+taxa. Se as condições do mês mudam (uma melhora do apetite por risco, uma queda dos
+juros), o Tesouro aumenta os lotes e aceita mais propostas, e o mercado compra
+mais. Escrevendo o choque estimado como
+\[
+u_t^j=s_t^j+\lambda^j d_t,
+\]
+onde \(s_t^j\) é a decisão de oferta do Tesouro que não responde ao mês e \(d_t\)
+é a notícia de mercado dentro do mês, a projeção local estima
+\[
+\mathrm{plim}\,\hat\beta_h^j=\beta_h^j+\lambda^j\,
+\frac{\mathrm{Cov}(d_t,\,y_{t+h}-y_{t-1}\mid X_{t-1})}{\mathrm{Var}(u_t^j\mid X_{t-1})}.
+\]
+O viés tem o sinal da resposta de \(y\) à notícia de mercado multiplicado pelo
+sinal de \(\lambda^j\).
+
+\paragraph{Evidência.} Os fatos abaixo apontam para \(\lambda^j\neq 0\) em \(N\) e
+\(R\), e não em \(F\):
+\begin{enumerate}[leftmargin=1.2cm]
+    \item \textbf{Correlação com preços do mesmo mês.} \(\varepsilon_t^R\) tem correlação
+    de \(-0{,}29\) com a variação do juro real de 5 anos, \(-0{,}28\) com a
+    depreciação cambial e \(-0{,}21\) com a variação do EMBI; \(\varepsilon_t^N\),
+    de \(-0{,}22\), \(-0{,}21\) e \(-0{,}15\), e de \(-0{,}20\) com a LTN de 1 ano;
+    \(\varepsilon_t^F\) fica entre \(-0{,}01\) e 0,12.
+    \item \textbf{Respostas de impacto.} Em \(h=0\), o choque \(R\) vem com juro real
+    0,12 p.p. menor (\(t=-3{,}8\)), real 1,6\% mais apreciado (\(t=-4{,}2\)) e EMBI 9
+    p.b. menor (\(t=-3{,}3\)); o choque \(N\), com LTN de 1 ano 0,07 p.p. menor
+    (\(t=-4{,}1\)), inflação implícita de 2 anos 0,04 p.p. menor e expectativa Focus
+    0,015 p.p. menor. Para variáveis de mercado com efeito imediato isso poderia
+    ser o efeito do choque, mas uma emissão maior inesperada deveria \emph{elevar}
+    os juros, não reduzi-los. O sinal é o de reação da emissão ao mercado.
+    \item \textbf{Leilões restritivos e lotes conjuntos.} Chamamos de
+    \emph{restritivo} o leilão em que o Tesouro vende o lote inteiro: nele, a oferta
+    é a restrição ativa e a quantidade emitida é igual ao lote. No leilão \emph{não
+    restritivo}, vende-se menos que o lote, que funciona apenas como teto não
+    atingido. A unidade correta é o lote, não o título. O arquivo do Tesouro tem uma
+    linha por título, e quando vários vencimentos dividem um lote conjunto o lote é
+    repetido em cada linha. Um grupo de títulos do mesmo papel, no mesmo dia, com a
+    mesma oferta é tratado como lote conjunto quando as vendas somam no máximo o
+    lote. Se somam exatamente o lote, o caso é claro; se somam menos, é ambíguo e é
+    tratado como conjunto, com uma variante que o trata como lotes separados. Se as
+    vendas superam o lote, são lotes separados. Desde 2006-11 há 297 lotes conjuntos
+    claros e 262 ambíguos em \(R\), 167 e 124 em \(F\), e 31 e 77 em \(N\). Contar por
+    título subestima a aceitação: um lote conjunto de duas NTN-B vendido por inteiro
+    aparecia como dois leilões não restritivos.
+
+    \emph{Correção.} Uma versão anterior desta seção contava por título e
+    afirmava que só 28\% dos leilões de NTN-B eram restritivos, de modo que a emissão
+    de NTN-B seria em geral limitada pela demanda. Contando por lote, a fração de
+    leilões restritivos desde 2006-11 é:
+    \begin{center}
+    \small
+    \begin{tabular}{lccc}
+    \toprule
+     & \(N\) & \(F\) & \(R\) \\
+    \midrule
+    por título (incorreto) & 76\% & 35\% & 28\% \\
+    por lote, ambíguos como conjuntos & 78\% & 65\% & 63\% \\
+    por lote, ambíguos como separados & 77\% & 56\% & 50\% \\
+    \bottomrule
+    \end{tabular}
+    \end{center}
+    A mediana do vendido sobre o ofertado por lote é 1,00 nas três classes. Em \(R\),
+    entre metade e dois terços dos leilões vendem o lote inteiro; a emissão de
+    NTN-B não é predominantemente limitada pela demanda. Nos leilões não
+    restritivos, a quantidade vendida também não é pura demanda: o Tesouro escolhe a
+    taxa de corte, e vender menos que o lote pode ser falta de demanda ou recusa de
+    propostas caras. Separar os dois casos exigiria o volume total de propostas por
+    leilão, que não está no arquivo histórico (a verificar se o Tesouro o divulga
+    nos resultados).
+    \item \textbf{A própria oferta reage ao mês.} O valor mensal ofertado (lotes
+    conjuntos contados uma vez) em \(R\) tem correlação de \(-0{,}14\) com a variação
+    do juro real de 5 anos, de \(-0{,}30\) com a depreciação cambial e de \(-0{,}19\)
+    com a variação do EMBI; em \(N\), de \(-0{,}21\), \(-0{,}26\) e \(-0{,}22\). Logo,
+    trocar a emissão pelo valor ofertado no mês não resolve o problema: o tamanho
+    dos lotes também responde ao mercado do mês.
+    \item \textbf{Ser restritivo depende pouco do mês, exceto em \(N\).} Os leilões
+    restritivos são aqueles em que uma variação do lote passa um para um para a
+    emissão. A fração mensal de lotes restritivos tem as correlações abaixo com as
+    variações de preços do mesmo mês:
+    \begin{center}
+    \small
+    \begin{tabular}{lccc}
+    \toprule
+     & \(N\) & \(F\) & \(R\) \\
+    \midrule
+    \(\Delta\) juro real 5 anos & \(-0{,}11\) & 0,02 & 0,09 \\
+    \(\Delta\) LTN 1 ano & \(-0{,}06\) & 0,09 & 0,09 \\
+    depreciação cambial & \(-0{,}13\) & \(-0{,}01\) & 0,08 \\
+    \(\Delta\) EMBI & \(-0{,}24\) & 0,08 & 0,07 \\
+    \bottomrule
+    \end{tabular}
+    \end{center}
+    Em \(N\), o lote é vendido inteiro com mais frequência em meses de mercado
+    favorável (EMBI caindo). Em \(F\) e \(R\) as correlações são pequenas. Ainda
+    assim, ser restritivo é um resultado do leilão e não deve ser usado para
+    selecionar a amostra.
+\end{enumerate}
+Os números vêm de \path{src/diagnose_auction_takeup.py}
+(\path{data/diagnostics/auction_takeup_{by_class,by_year,monthly_corr,binding,}}
+\path{lot_vs_bond,lot_types}.csv).
+
+\paragraph{Consequência para o teste.} Os dois vieses vão contra a ordenação
+prevista. O Tesouro vende mais prefixados quando juros nominais e inflação
+implícita caem, de modo que \(\hat\beta^{N,\pi}\) tende a ser viesado para baixo. Em
+\(R\), a direção é ambígua: a demanda por proteção contra inflação aumenta quando o
+risco inflacionário sobe, o que viesaria \(\hat\beta^{R,\pi}\) para cima, mas os
+meses de emissão alta de NTN-B são meses de real apreciado, o que empurra para
+baixo. Por isso a falha da ordenação na Seção~\ref{sec:lp} não pode ser lida como
+rejeição da teoria antes de tratar esse problema. A especificação \path{ordlast}
+(variações financeiras de \(t\) em \(X\)) só reduz a diferença média \(N-R\) no nível
+de preços de \(-0{,}16\) para \(-0{,}09\), mas ela supõe que a emissão não afeta
+preços dentro do mês e por isso não resolve o problema.
+
+\paragraph{Proposta 1: surpresas de oferta por leilão.}
+A unidade passa a ser o leilão \(k\), no dia \(\tau_k\). A decisão de oferta do
+Tesouro é o lote \(O_k\), anunciado no edital antes do leilão. (Na implementação,
+\(k\) é o dia de leilão de cada papel, somando os lotes do dia; ver
+Subseção~\ref{sec:prop1}.) O choque é a parte do
+lote que não se prevê com a informação disponível antes do edital:
+\[
+\tilde s_k=\frac{P_{k,\tau_k-1}\,\bigl(O_k-\mathbb{E}[O_k\mid\mathcal{I}_{\tau_k^e-1}]\bigr)}{PIB^{12m}_{t-1}},
+\]
+em que \(\tau_k^e\) é a data do edital, \(P_{k,\tau_k-1}\) é o preço do título na
+véspera (o que evita a valoração pelo preço do próprio leilão) e a previsão usa o
+lote do mesmo título no leilão anterior, a regra de lote padrão do trimestre e as
+variações de preços entre o leilão anterior e a véspera do edital. O choque mensal
+é \(\tilde s_t^j=\sum_{k\in t,\,j}\tilde s_k\). Ele entra na projeção local como
+instrumento externo para \(\varepsilon_t^j\) (LP-IV) ou diretamente como choque.
+
+\emph{Versão ponderada pela probabilidade de o leilão ser restritivo.} Uma surpresa
+no lote só altera a emissão se o leilão for restritivo. Em leilões não restritivos o
+lote não é atingido e a surpresa não tem efeito, o que enfraquece o instrumento,
+sobretudo em \(F\) e \(R\). Restringir a amostra aos leilões restritivos seria um
+erro: ser restritivo é um resultado do leilão, que em \(N\) se correlaciona com as
+condições do mês (item 5 acima), e selecionar por ele reintroduziria a dependência
+que se quer eliminar. A
+alternativa é ponderar a surpresa pela probabilidade \emph{prevista} de o leilão ser
+restritivo, estimada só com informação anterior ao edital:
+\[
+\tilde s_k^{w}=\hat\pi_k\,\tilde s_k,\qquad
+\hat\pi_k=\Pr\bigl(\mbox{leilão }k\mbox{ restritivo}\mid\mathcal{I}_{\tau_k^e-1}\bigr),
+\]
+com \(\hat\pi_k\) dado, por exemplo, por um logit com o estado do leilão anterior do
+mesmo título, a taxa média de aceitação recente do título, a classe, o prazo e as
+variações de preços até a véspera do edital. O estado é persistente. A
+probabilidade de um lote ser restritivo, dado o estado do lote anterior com a mesma
+composição de títulos, é:
+\begin{center}
+\small
+\begin{tabular}{lccc}
+\toprule
+ & \(N\) & \(F\) & \(R\) \\
+\midrule
+anterior restritivo & 0,83 & 0,79 & 0,75 \\
+anterior não restritivo & 0,63 & 0,41 & 0,44 \\
+\bottomrule
+\end{tabular}
+\end{center}
+(Contando por título, a persistência parecia muito maior em \(F\) e \(R\), 0,10 e 0,08
+após um leilão não restritivo, mas isso vinha dos lotes conjuntos.) Como \(\hat\pi_k\) é
+função de informação predeterminada, a ponderação concentra o instrumento nos
+leilões em que ele tem força sem condicionar no resultado do leilão. A
+exogeneidade continua dependendo de \(\tilde s_k\); a ponderação só melhora a
+relevância. A previsão de \(\hat\pi_k\) deve usar só o passado (estimação
+recursiva), como a variante em pseudo tempo real da equação de previsão.
+\begin{itemize}[leftmargin=1.2cm]
+    \item \textbf{Fontes.} (i) Histórico de leilões do Tesouro
+    (arquivo \path{historico-leiloes-todos.xls} em \path{data/raw/}), já no projeto, com oferta,
+    quantidade vendida, taxa média, taxa de corte e financeiro por leilão e por
+    volta, de 2000 a 2026; (ii) datas e conteúdo dos editais, nos comunicados de
+    leilão publicados pelo Tesouro Nacional e no conjunto de dados de leilões do
+    Tesouro Transparente (a confirmar se traz a data do edital); (iii) preços na
+    véspera: preços e taxas diárias do Tesouro Direto (Tesouro Transparente, desde
+    2002), a ETTJ ANBIMA diária, já integrada até 2025-01, e as taxas indicativas
+    do mercado secundário da ANBIMA.
+    \item \textbf{Viabilidade: alta.} A oferta por leilão já está no projeto e cobre
+    toda a amostra; a primeira versão, com previsão pelo lote anterior e preços da
+    ETTJ, pode ser feita com os dados atuais. O custo está em levantar as datas dos
+    editais; enquanto isso, pode-se supor edital na véspera e testar a robustez.
+    \item \textbf{Riscos.} Em \(R\), entre um terço e metade dos leilões não são
+    restritivos, e nesses a variação do lote muda pouco a quantidade vendida; o
+    instrumento pode ser fraco. A versão ponderada por \(\hat\pi_k\) mitiga, mas não
+    elimina, esse risco. É
+    preciso reportar o primeiro estágio das duas versões (estatística \(F\) robusta,
+    Montiel Olea--Pflueger) e usar inferência robusta a instrumento fraco
+    (Anderson--Rubin).
+    O lote ainda pode reagir a informação dos dias anteriores ao edital, que só
+    está parcialmente controlada. A soma mensal herda a frequência baixa das
+    variáveis macro, então o ganho é na exogeneidade, não no número de
+    observações.
+\end{itemize}
+
+\paragraph{Proposta 2: identificação de alta frequência no anúncio do lote.}
+Em vez de prever o lote, mede-se a surpresa pela reação do mercado ao anúncio,
+como na identificação de alta frequência da política monetária. Para cada edital,
+\[
+z_k=\Delta y^{\mathrm{janela}}_{k},
+\]
+a variação de juros na janela em torno da publicação do edital. Para separar choque
+de oferta de notícia de demanda, usam-se restrições de sinal entre preços. Mais
+oferta de \(R\) eleva o juro real e reduz a inflação implícita, enquanto notícia de
+demanda por proteção eleva a inflação implícita. Mais oferta de \(N\) eleva o juro
+nominal, com efeito pequeno no real. As surpresas são somadas no mês e usadas como
+instrumento externo na projeção local.
+\begin{itemize}[leftmargin=1.2cm]
+    \item \textbf{Fontes.} Horário de publicação dos editais (comunicados do Tesouro);
+    preços intradiários dos contratos futuros de DI e de cupom de IPCA (DAP) da B3,
+    por meio de dados de mercado da B3 (pagos) ou de provedores como Bloomberg ou
+    Refinitiv; com dados diários, taxas indicativas da ANBIMA e preços do Tesouro
+    Direto, com janela de um dia.
+    \item \textbf{Viabilidade: média a baixa.} Com janela intradiária, a identificação
+    é a mais limpa, mas depende de dados pagos e de horários de edital que precisam
+    ser coletados. Com janela diária, a viabilidade é alta, mas a janela de um dia
+    mistura o edital com outras notícias, e os editais saem com frequência (cerca de
+    sete dias de leilão por mês), o que dilui o sinal. A experiência com choques de
+    oferta de títulos em outros mercados sugere reações pequenas a lotes de rotina;
+    o poder deve vir de anúncios de mudança de estratégia (planos anuais, mudanças
+    de lote, leilões cancelados ou extraordinários).
+    \item \textbf{Riscos.} Instrumento fraco; o anúncio pode revelar informação do
+    Tesouro sobre suas necessidades fiscais (efeito informacional, que é justamente
+    o canal de respaldo que a purga quer separar), o que exige controlar notícias
+    fiscais no mesmo dia.
+\end{itemize}
+
+\paragraph{Proposta 3: limites por ordenação.}
+Sem dados novos, é possível delimitar o efeito. A especificação \path{ordlast}
+atribui todo o comovimento do mês à reação da emissão (limite em que a emissão não
+afeta preços dentro do mês). A especificação \path{base} atribui tudo ao efeito da
+emissão (limite em que a emissão não reage ao mês). Uma família intermediária
+fixa \(\lambda^j\) em valores plausíveis, por exemplo calibrados pela elasticidade
+da taxa de aceitação à variação de preços nos leilões, e mostra como
+\(\beta_h^{N}-\beta_h^{R}\) muda.
+\begin{itemize}[leftmargin=1.2cm]
+    \item \textbf{Fontes.} As já usadas.
+    \item \textbf{Viabilidade: imediata,} mas é uma análise de sensibilidade, não uma
+    identificação. Serve para dizer se a conclusão sobre a ordenação depende do
+    tamanho do viés.
+\end{itemize}
+
+\paragraph{Alternativas descartadas como solução principal.} Um instrumento baseado
+na demanda regulatória de fundos de pensão por NTN-B (normas do CMN e dados da
+Previc ou da Abrapp), previsto na nota como robustez, desloca a demanda, não a
+oferta. Ele move juros diretamente e viola a exclusão para as variáveis de
+mercado. Uma base narrativa de decisões de emissão (Relatório Mensal da Dívida,
+PAF, comunicados de leilões extraordinários) é útil para validar os choques, mas
+tem poucos eventos, e muitos deles, como os leilões extraordinários, são reações a
+estresse de mercado.
+
+\paragraph{Recomendação.} Implementar primeiro a Proposta~1 com os dados disponíveis
+(lote anterior como previsão e edital na véspera), nas versões simples e ponderada
+por \(\hat\pi_k\), reportando o primeiro estágio por classe, e a Proposta~3 como
+sensibilidade imediata. A Proposta~2 com dados diários
+pode servir de validação; com dados intradiários, só se houver acesso a dados da B3
+ou de um provedor.
+
+\subsection{Implementação da Proposta 1}\label{sec:prop1}
+
+\paragraph{Construção.} O script \path{src/build_offer_surprises.py} implementa a
+Proposta~1 só com dados já disponíveis.
+\begin{itemize}[leftmargin=1.2cm]
+    \item \textbf{Unidade.} As linhas por título são agregadas em lotes (conjuntos
+    contados uma vez) e os lotes em dias de leilão de cada papel (LTN, NTN-F, LFT,
+    NTN-B, NTN-B Principal): 2\,212 dias em \(N\), 882 em \(F\) e 686 em \(R\). O dia
+    é a unidade porque a composição dos lotes conjuntos muda de um leilão para
+    outro, o que impede comparar lote a lote.
+    \item \textbf{Valor ofertado.} \(OV_k=\sum_{\ell\in k}O_\ell\,P^{ref}_\ell\), em que
+    \(P^{ref}_\ell\) é a média, sobre os títulos do lote, do último preço unitário de
+    leilão de cada título antes do dia \(k\); para títulos novos usa-se a média do
+    papel. Nenhum preço do próprio dia entra.
+    \item \textbf{Edital.} A data não está nos dados; supõe-se edital na véspera, de
+    modo que a informação anterior ao edital vai até dois dias úteis antes do leilão.
+    \item \textbf{Surpresas.} \path{naive}: \(OV_k-OV_{k^-}\), em relação ao dia de
+    leilão anterior do mesmo papel. \path{pred}: \(OV_k-OV_{k^-}\exp(x_k'\hat b)\),
+    com \(\log(OV_k/OV_{k^-})\) previsto por MQO recursivo por classe (reestimado
+    a cada mês, janela crescente, a partir de 2006-02, quando começa a ETTJ diária)
+    com as variações dos juros PRE 1 e 5 anos e IPCA 5 anos desde o leilão anterior,
+    o estado e a aceitação do dia anterior, a aceitação média dos últimos quatro, o
+    intervalo desde o leilão anterior e o prazo médio. As versões \path{_w}
+    multiplicam a surpresa por \(\hat\pi_k\), de um logit recursivo com as mesmas
+    variáveis. A variante \path{naive_sep} trata os grupos ambíguos como lotes
+    separados.
+    \item \textbf{Instrumentos mensais.} Soma no mês dividida pelo PIB de 12 meses
+    defasado (mesma unidade de \(\varepsilon\)): \path{offsurp_{j}_{naive,pred,}}
+    \path{naive_w,pred_w,naive_sep}. O painel resultante,
+    \path{ftpl_monthly_panel_with_offer_surprises.csv} (em \path{data/clean/}), tem 564 linhas e
+    775 colunas e passa a ser a entrada de \path{build_local_projections.py}.
+\end{itemize}
+
+\paragraph{Previsão do lote e de \(\hat\pi_k\).} A previsão recursiva quase não
+melhora a ingênua: \(R^2\) fora da amostra de 0,03 em \(N\), \(-0{,}02\) em \(F\) e
+0,10 em \(R\) em relação a \(OV_{k^-}\). As variações de preços antes do edital
+explicam pouco da mudança do lote, o que é bom para a exogeneidade em relação ao
+mercado dos dias anteriores, mas faz da versão \path{pred} apenas a \path{naive}
+com ruído. O logit discrimina pouco no nível do dia (AUC de 0,62 em \(N\), 0,71 em
+\(F\) e 0,61 em \(R\)), porque um dia só é restritivo se todos os seus lotes forem.
+
+\paragraph{Primeiro estágio.} Regressão mensal de cada \(\varepsilon_t^j\) nos três
+instrumentos com os controles da projeção local (2007-02 a 2025-02), com \(F\)
+robusto de Sanderson--Windmeijer para cada endógena:
+\begin{center}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Instrumento & meses & \(N\) & \(F\) & \(R\) \\
+\midrule
+\path{naive} & 217 & 9,4 & 33,3 & 6,1 \\
+\path{naive_sep} & 217 & 9,7 & 9,2 & 9,6 \\
+\path{naive_w} & 185 & 9,5 & 46,4 & 10,4 \\
+\path{pred} & 185 & 0,2 & 0,3 & 0,1 \\
+\bottomrule
+\end{tabular}
+\end{center}
+O primeiro estágio é diagonal: a surpresa de cada classe só move o choque da
+própria classe (coeficientes de 0,84, 0,64 e 0,27 em \path{naive}, \(t\) de 4,1,
+7,2 e 2,2). Em \(F\) o instrumento é forte; em \(N\) fica no limite usual de 10; em
+\(R\) é fraco na versão principal e só chega a 10 na ponderada, com amostra mais
+curta. A versão \path{pred} não serve como instrumento.
+
+\paragraph{Exogeneidade.} A correlação com as variações de preços do mesmo mês cai em
+relação a \(\varepsilon\), sem desaparecer:
+\begin{center}
+\small
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{\(\Delta\) juro real 5 anos} & \multicolumn{2}{c}{depreciação cambial} \\
+ & \(\varepsilon\) & \path{naive} & \(\varepsilon\) & \path{naive} \\
+\midrule
+\(N\) & \(-0{,}22\) & \(-0{,}10\) & \(-0{,}22\) & \(-0{,}19\) \\
+\(F\) & \(-0{,}01\) & 0,10 & 0,13 & 0,21 \\
+\(R\) & \(-0{,}31\) & \(-0{,}18\) & \(-0{,}27\) & \(-0{,}13\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+Na versão ponderada, \(R\) cai para \(-0{,}08\) e \(-0{,}14\). O teste de antecipação
+(\path{offer_surprises_anticipation.csv}) regride o valor vendido na surpresa por
+faixa de \(\hat\pi_k\). Em \(R\), nos dias com \(\hat\pi_k<0{,}3\), a inclinação é
+0,52 (\(t=5{,}4\)), mas esses dias ainda são restritivos em 32\% dos casos, porque o
+logit discrimina pouco. Por isso o teste não separa antecipação da demanda de efeito
+mecânico e é inconclusivo.
+
+\paragraph{Projeções locais com instrumento.} As especificações \path{iv_naive}
+(principal), \path{iv_naive_w}, \path{iv_naive_sep} e \path{iv_pred} estimam a
+eq.~(\ref{eq:doc_local_projection}) por MQ2E, com os três choques instrumentados
+pelas três surpresas e os mesmos controles; \path{rf_naive} é a forma reduzida, com
+as surpresas no lugar dos choques. No nível de preços, por 0,1\% do PIB:
+\begin{center}
+\footnotesize
+\begin{tabular}{lcccc}
+\toprule
+ & \(h\) & \(N\) & \(F\) & \(R\) \\
+\midrule
+\path{base} (MQO) & 12 & \(-0{,}05\) (0,07) & 0,13 (0,07) & 0,20 (0,23) \\
+\path{iv_naive} & 6 & 0,07 (0,13) & 0,20 (0,06) & \(-0{,}11\) (0,36) \\
+ & 12 & 0,09 (0,20) & 0,21 (0,08) & \(-0{,}27\) (0,49) \\
+ & 24 & \(-0{,}03\) (0,27) & 0,11 (0,18) & 0,09 (0,59) \\
+\path{iv_naive_sep} & 12 & 0,06 (0,20) & 0,21 (0,10) & \(-0{,}10\) (0,39) \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{enumerate}[leftmargin=1.2cm]
+    \item \textbf{O viés de simultaneidade some em \(N\) e \(F\).} Com o instrumento, o
+    choque \(N\) deixa de vir com juros em queda no impacto (juro real de 5 anos:
+    \(+0{,}04\), erro-padrão 0,06, contra \(-0{,}04\) por MQO), e as diferenças negativas
+    e significativas de MQO desaparecem. A diferença média \(\beta^N-\beta^R\) no
+    nível de preços em 0--24 meses passa de \(-0{,}16\) (0,14) para \(+0{,}16\) (0,40);
+    \(\beta^N-\beta^F\), de \(-0{,}16\) (0,08) para \(-0{,}12\) (0,15). Na expectativa
+    Focus, \(\beta^N-\beta^R\) passa de \(-0{,}07\) para \(+0{,}07\) (0,10).
+    \item \textbf{O resultado mais robusto é o de \(F\).} Uma emissão inesperada de
+    LFT de 0,1\% do PIB eleva o nível de preços em cerca de 0,2\% em 6 a 12 meses, em
+    todas as versões com instrumento e na forma reduzida (0,13 em \(h=12\), \(t=2{,}3\)).
+    \item \textbf{\(R\) continua sem identificação.} O instrumento é fraco (\(F=6\)) e, no
+    impacto, o choque \(R\) instrumentado ainda vem com juro real em queda
+    (\(-0{,}46\), erro-padrão 0,26) e real apreciado (\(-3{,}9\%\), erro-padrão 2,3); na
+    forma reduzida, a surpresa de NTN-B tem impacto de \(-0{,}14\) p.p. no juro real
+    (\(t=-3{,}1\)). O tamanho dos lotes de NTN-B parece acompanhar a demanda do mês. A
+    versão ponderada, com primeiro estágio mais forte, dá respostas de \(R\)
+    instáveis e grandes (2,3\% em \(h=12\)), com 182 meses.
+    \item \textbf{A ordenação continua indeterminada.} Com erros-padrão de 0,3 a 0,4
+    na diferença \(N-R\), nenhuma das especificações rejeita a igualdade. O teste
+    deixou de apontar na direção contrária à teoria, mas não tem poder para
+    confirmá-la.
+\end{enumerate}
+\begin{sloppypar}
+Os resultados estão em \path{data/diagnostics/}, nos arquivos
+\path{offer_surprises_{audit,forecast_fit,anticipation,first_stage,exogeneity}.csv};
+nas surpresas por dia de leilão, em \path{offer_surprises_auctions.csv} (pasta
+\path{data/intermediate/offer_surprises/}); na figura
+\path{data/figures/offer_surprises.png}; e, para as projeções, nas especificações
+\path{iv_*} e \path{rf_naive} de \path{local_projections_{irf,tests}.csv}, com
+figuras \path{local_projections_{iv_naive,iv_naive_w,rf_naive}.png}.
+\end{sloppypar}
+
+\paragraph{Pendências.} (i) Inferência robusta a instrumento fraco
+(Anderson--Rubin por subvetor) para as diferenças entre classes; (ii) datas reais dos
+editais; (iii) para \(R\), uma fonte de variação de oferta que não acompanhe a
+demanda: a Proposta~2 em anúncios de mudança de estratégia ou uma versão no nível
+do lote com \(\hat\pi\) mais discriminante.
+
+\subsection{Próximos passos}
+
+\begin{enumerate}[leftmargin=1.2cm]
+    \item Concluir a identificação de \(R\) e a inferência robusta a instrumento
+    fraco (Subseção~\ref{sec:prop1}).
+    \item Interações com a participação defasada (eq.~36 da nota) e dependência de
+    estado pela ociosidade (eq.~37).
+    \item Bootstrap em blocos que repete a construção dos choques.
+    \item Reestimar com a ETTJ estendida, que alonga a amostra após 2025-02.
+\end{enumerate}
+
 \section{Estado atual do projeto}
 
 O projeto está na transição entre a construção de dados e a implementação
@@ -1926,7 +2491,9 @@ econométrica dos choques de emissão.
     (2026) e choques purgados \(\varepsilon_t^j\) com o Focus primário e doze
     alternativas (Seção~\ref{sec:purga});
     \item revisões Focus com \path{baseCalculo = 1} (2021-04 em diante), comparadas
-    com a versão principal e usadas como robustez da purga.
+    com a versão principal e usadas como robustez da purga;
+    \item expectativa de inflação Focus de 12 meses e primeira rodada de projeções
+    locais, com testes por janela e bandas simultâneas (Seção~\ref{sec:lp}).
 \end{itemize}
 
 \subsection{Ainda pendente}
@@ -1945,8 +2512,10 @@ econométrica dos choques de emissão.
     de janeiro de 2025) e repetir a cadeia a partir da Etapa B;
     \item estender o cronograma mensal de vencimentos para antes de 2006-11, com
     anexos antigos do RMD ou reconstrução a partir de leilões e recompras;
-    \item implementar projeções locais;
-    \item testar formalmente as restrições \(N > R\) e \(N > F > R\);
+    \item tratar a simultaneidade entre emissão e preços de ativos dentro do mês
+    (choques por leilão ou pela oferta anunciada);
+    \item interações com a participação defasada, dependência de estado e bootstrap
+    das projeções locais;
     \item construir validação narrativa e exercícios de robustez.
 \end{itemize}
 

@@ -1,0 +1,2 @@
+source,source_url,source_file,n_rows_raw,first_survey_date,last_survey_date,run_timestamp_utc,first_month,last_month,n_months,corr_smooth_vs_nonsmooth,output_panel,output_shape
+BCB_OLINDA_API,https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativasMercadoInflacao12Meses,data/raw/focus/focus_ipca12m_20261123T233952Z.csv,12542,2001-11-07,2026-11-19,20261123T233952Z,2001-12,2026-11,300,0.9961,data/clean/ftpl_monthly_panel_with_inflation_expectations.csv,564x757

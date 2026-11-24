@@ -1,0 +1,269 @@
+{
+  "specs": {
+    "base": {
+      "shocks": {
+        "N": "eps_N_base_fprim",
+        "F": "eps_F_base_fprim",
+        "R": "eps_R_base_fprim"
+      },
+      "lags": 3
+    },
+    "lags1": {
+      "shocks": {
+        "N": "eps_N_base_fprim",
+        "F": "eps_F_base_fprim",
+        "R": "eps_R_base_fprim"
+      },
+      "lags": 1
+    },
+    "lags6": {
+      "shocks": {
+        "N": "eps_N_base_fprim",
+        "F": "eps_F_base_fprim",
+        "R": "eps_R_base_fprim"
+      },
+      "lags": 6
+    },
+    "evdum": {
+      "shocks": {
+        "N": "eps_N_base_fprim",
+        "F": "eps_F_base_fprim",
+        "R": "eps_R_base_fprim"
+      },
+      "lags": 3,
+      "dummies": true
+    },
+    "pre2020": {
+      "shocks": {
+        "N": "eps_N_base_fprim",
+        "F": "eps_F_base_fprim",
+        "R": "eps_R_base_fprim"
+      },
+      "lags": 3,
+      "end": "2019-12-01"
+    },
+    "nopurge": {
+      "shocks": {
+        "N": "u_N_base",
+        "F": "u_F_base",
+        "R": "u_R_base"
+      },
+      "lags": 3
+    },
+    "cfrisk": {
+      "shocks": {
+        "N": "eps_N_base_fprim_cfrisk",
+        "F": "eps_F_base_fprim_cfrisk",
+        "R": "eps_R_base_fprim_cfrisk"
+      },
+      "lags": 3
+    },
+    "pprim": {
+      "shocks": {
+        "N": "eps_N_base_pprim",
+        "F": "eps_F_base_pprim",
+        "R": "eps_R_base_pprim"
+      },
+      "lags": 1
+    },
+    "fprim16": {
+      "shocks": {
+        "N": "eps_N_base_fprim16",
+        "F": "eps_F_base_fprim16",
+        "R": "eps_R_base_fprim16"
+      },
+      "lags": 1
+    },
+    "ordlast": {
+      "shocks": {
+        "N": "eps_N_base_fprim",
+        "F": "eps_F_base_fprim",
+        "R": "eps_R_base_fprim"
+      },
+      "lags": 3,
+      "contemp": true
+    },
+    "rt": {
+      "shocks": {
+        "N": "eps_N_base_rt_fprim",
+        "F": "eps_F_base_rt_fprim",
+        "R": "eps_R_base_rt_fprim"
+      },
+      "lags": 3
+    },
+    "ramp": {
+      "shocks": {
+        "N": "eps_N_base_fprim",
+        "F": "eps_F_base_fprim",
+        "R": "eps_Ramp_ramp_fprim"
+      },
+      "lags": 3
+    },
+    "iv_naive": {
+      "shocks": {
+        "N": "eps_N_base_fprim",
+        "F": "eps_F_base_fprim",
+        "R": "eps_R_base_fprim"
+      },
+      "lags": 3,
+      "iv": "naive"
+    },
+    "iv_naive_w": {
+      "shocks": {
+        "N": "eps_N_base_fprim",
+        "F": "eps_F_base_fprim",
+        "R": "eps_R_base_fprim"
+      },
+      "lags": 3,
+      "iv": "naive_w"
+    },
+    "iv_pred": {
+      "shocks": {
+        "N": "eps_N_base_fprim",
+        "F": "eps_F_base_fprim",
+        "R": "eps_R_base_fprim"
+      },
+      "lags": 3,
+      "iv": "pred"
+    },
+    "iv_naive_sep": {
+      "shocks": {
+        "N": "eps_N_base_fprim",
+        "F": "eps_F_base_fprim",
+        "R": "eps_R_base_fprim"
+      },
+      "lags": 3,
+      "iv": "naive_sep"
+    },
+    "rf_naive": {
+      "shocks": {
+        "N": "offsurp_N_naive",
+        "F": "offsurp_F_naive",
+        "R": "offsurp_R_naive"
+      },
+      "lags": 3
+    }
+  },
+  "outcomes": {
+    "p": {
+      "column": "ipca_index",
+      "transform": "log100",
+      "label": "Nível de preços (IPCA)",
+      "unit": "%"
+    },
+    "focus_ipca12m": {
+      "column": "focus_ipca12m_pct",
+      "transform": "level",
+      "label": "Expectativa IPCA 12m (Focus)",
+      "unit": "p.p."
+    },
+    "selic": {
+      "column": "selic_target_pa",
+      "transform": "level",
+      "label": "Meta Selic",
+      "unit": "p.p."
+    },
+    "ltn_1y": {
+      "column": "ltn_1y_pct",
+      "transform": "level",
+      "label": "LTN 1 ano",
+      "unit": "p.p."
+    },
+    "real_5y": {
+      "column": "real_yield_5y_pct",
+      "transform": "level",
+      "label": "Juro real 5 anos",
+      "unit": "p.p."
+    },
+    "real_10y": {
+      "column": "real_yield_10y_pct",
+      "transform": "level",
+      "label": "Juro real 10 anos",
+      "unit": "p.p."
+    },
+    "bei_2y": {
+      "column": "bei_2y_pct",
+      "transform": "level",
+      "label": "Inflação implícita 2 anos",
+      "unit": "p.p."
+    },
+    "bei_5y": {
+      "column": "bei_5y_pct",
+      "transform": "level",
+      "label": "Inflação implícita 5 anos",
+      "unit": "p.p."
+    },
+    "fx": {
+      "column": "brl_usd",
+      "transform": "log100",
+      "label": "Câmbio BRL/USD",
+      "unit": "%"
+    },
+    "embi": {
+      "column": "embi_spread_bp",
+      "transform": "level",
+      "label": "EMBI Brasil",
+      "unit": "p.b."
+    },
+    "ibc": {
+      "column": "ibc_br_sa",
+      "transform": "log100",
+      "label": "IBC-Br",
+      "unit": "%"
+    }
+  },
+  "main_outcomes": [
+    "p",
+    "focus_ipca12m",
+    "selic",
+    "real_5y",
+    "bei_2y",
+    "fx",
+    "embi",
+    "ibc"
+  ],
+  "inflation_outcomes_signed": [
+    "p",
+    "focus_ipca12m",
+    "bei_2y",
+    "bei_5y"
+  ],
+  "controls": {
+    "macro_diff_lags": {
+      "infl": [
+        "ipca_index",
+        "log100"
+      ],
+      "selic": [
+        "selic_target_pa",
+        "level"
+      ],
+      "ibc": [
+        "ibc_br_sa",
+        "log100"
+      ],
+      "fx": [
+        "brl_usd",
+        "log100"
+      ]
+    },
+    "level_t-1": [
+      "selic_target_pa",
+      "embi_spread_bp",
+      "focus_ipca12m_pct"
+    ],
+    "curve": [
+      "pre_pc1_avg_lag1",
+      "pre_pc2_avg_lag1",
+      "pre_pc3_avg_lag1"
+    ],
+    "event_dummies": [
+      "d_focus_gdprev_2007m04",
+      "d_focus_covid_2020m03",
+      "d_focus_covid_2020m04",
+      "d_focus_covid_2020m05",
+      "d_focus_covid_2020m06",
+      "d_focus_covid_2020m07"
+    ]
+  }
+}
